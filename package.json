@@ -13,6 +13,7 @@
     "babel-polyfill": "^6.26.0",
     "babel-register": "^6.26.0",
     "debug": "^2.6.3",
+    "dizzyl-util": "^2.1.1",
     "graphql": "^0.13.2",
     "koa": "^2.2.0",
     "koa-bodyparser": "^3.2.0",
@@ -27,6 +28,6 @@
     "pug": "^2.0.0-rc.1"
   },
   "devDependencies": {
-    "nodemon": "^1.8.1"
+    "nodemon": "^1.18.4"
   }
 }
