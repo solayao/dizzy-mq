@@ -11,13 +11,14 @@
         "js": "node --harmony"
     },
     "watch": [
-        "www",
+        "www.js",
         "app.js",
         "routes/*",
         "schemas/*"
     ],
     "env": {
-        "NODE_ENV": "development"
+        "NODE_ENV": "development",
+        "PORT": "12345"
     },
     "ext": "js json"
 }

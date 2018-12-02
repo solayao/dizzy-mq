@@ -5,6 +5,7 @@
  */
 
 var app = require('../app');
+var createIO = require('../socketio');
 var debug = require('debug')('demo:server');
 var http = require('http');
 
@@ -13,14 +14,16 @@ var http = require('http');
  */
 
 var port = normalizePort(process.env.PORT || '4627');
-// app.set('port', port);
 
 /**
  * Create HTTP server.
  */
-
 var server = http.createServer(app.callback());
 
+/**
+ * Create Socket.io server.
+ */
+createIO(server);
 /**
  * Listen on provided port, on all network interfaces.
  */
