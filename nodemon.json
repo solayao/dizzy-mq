@@ -14,7 +14,9 @@
         "www.js",
         "app.js",
         "routes/*",
-        "schemas/*"
+        "schemas/*",
+        "socketio/*",
+        "controler/*"
     ],
     "env": {
         "NODE_ENV": "development",

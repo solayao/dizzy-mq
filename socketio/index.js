@@ -1,34 +1,44 @@
-const {Redis} = require('dizzyl-util/es/dbs');
-const redisServer = new Redis({
-    "host": "127.0.0.1",
-    "port": 6379
+const io = require('socket.io')();
+const crawler = io.of('/crawler');
+const fbe = io.of('/fbe');
+const {mqAck, mqAdd, mqDoing} = require('../controler');
+const {PENDINGKEY, DOINGKEY} = require('../controler/const');
+
+let crawlerSocket = {}, fbeSocket = {};
+
+crawler.on('connection', socket => {
+    console.log('welcome to room-crawler', socket.id);
+    crawlerSocket[socket.id] = socket;
+
+    socket.on('finish', result => {
+        console.log(result)
+        mqAck(result);
+        fbeSocket[result.split('||')[0]].emit('finishMQ', '嘻嘻嘻')
+    });
+
+    socket.on('disconnect', function () {
+        crawlerSocket[socket.id] = undefined;
+    });
 });
 
-const createIOServer = (server) => {
-    const io = require('socket.io')(server);
-    io.on('connection', (socket) => {
-        console.log('A socket.io client connected!');
+fbe.on('connection', socket => {
+    console.log('welcome to room-fbe', socket.id);
+    fbeSocket[socket.id] = socket;
 
-        socket.on('disconnect', (reason) => {
-            let rooms = Object.keys(socket.rooms);
-            console.log(`${rooms} disconnected, because ${reason}`);
-        });
+    socket.on('disconnect', function () {
+        fbeSocket[socket.id] = undefined;
+    });
 
-        socket.on('error', (error) => {
-            // ...
-        });
-
-        socket.on('ms-crawler', async (url) => {
-            await redisServer.actionForClient(client => client.RPUSHAsync('mq-crawler', url));
-            socket.emit('crawler', url, (result) => {
-                console.log(result); 
+    socket.on('addMQ', data => {
+        mqAdd(`${socket.id}||${data}`, () => {
+            // crawler.emit('start');
+            crawler.clients((error, clients) => {
+                if (error) throw error;
+                crawlerSocket[clients[0]].emit('start', PENDINGKEY, mqDoing);
             });
-        });
-
-        socket.on('ms-crud', (msg) => {
-            console.log('message: ' + msg);
         })
     });
-}
+});
 
-module.exports = createIOServer;
+
+module.exports = io;
