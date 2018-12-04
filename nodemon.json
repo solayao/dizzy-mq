@@ -12,9 +12,6 @@
     },
     "watch": [
         "www.js",
-        "app.js",
-        "routes/*",
-        "schemas/*",
         "socketio/*",
         "controler/*"
     ],

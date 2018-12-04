@@ -3,24 +3,22 @@
 /**
  * Module dependencies.
  */
-
-// var app = require('../app');
-var debug = require('debug')('demo:server');
+require("@babel/polyfill");
+require("@babel/register");
 var http = require('http');
 var io = require('../socketio');
 
 /**
  * Get port from environment and store in Express.
  */
-
 var port = normalizePort(process.env.PORT || '4627');
 
 /**
  * Create HTTP server.
  */
-// var server = http.createServer(app.callback());
 var server = http.createServer();
 io.listen(server);
+
 /**
  * Listen on provided port, on all network interfaces.
  */

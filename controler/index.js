@@ -1,17 +1,12 @@
-const {Redis} = require('dizzyl-util/es/dbs');
-const redisServer = new Redis({
-    "host": "127.0.0.1",
-    "port": 6379
-});
-const {PENDINGKEY, DOINGKEY} = require('./const');
+const {redisServer} = require('../dbs');
+const {PENDINGKEY, DOINGKEY, MQKEYJOIN} = require('./const');
+const schedule = require('node-schedule');
 
-const mqAdd = async (mess, cb) => {
+const mqAdd = async (mess) => {
     await redisServer.actionForClient(client => client.RPUSHAsync(PENDINGKEY, mess));
-    cb();
 }
 
 const mqDoing = async (mess) => {
-    // const mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 30));
     if (mess) {
         await redisServer.hmSet(DOINGKEY, {
             [mess]: JSON.stringify({
@@ -23,7 +18,7 @@ const mqDoing = async (mess) => {
     return;
 }
 
-const mqAck = async (mess, cb) => {
+const mqAck = async (mess) => {
     let messVal = await redisServer.actionForClient(client => client.HGETAsync(DOINGKEY, mess));
     let messValue = JSON.parse(messVal);
     await redisServer.actionForClient(client => client.HDELAsync(DOINGKEY, mess));
@@ -32,12 +27,35 @@ const mqAck = async (mess, cb) => {
     } else {
         return;
     }
+}
 
-    // cb();
+const mqCheckPend = (io, ioSocket) =>{
+    let j = schedule.scheduleJob('*/10 * * * * *', async () => {
+        const mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 30));
+        const mqKey = mess ? mess[1] : null;
+        if (!mqKey) return;
+        const mqKeyList = mqKey.split(MQKEYJOIN);
+        const socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = mqKeyList[2];
+        if (mqName === 'start-crawler-ch') {
+            io.to('crawler').clients((error, clients) => {
+                if (error) throw error;
+                if (clients[0]) {
+                    ioSocket[clients[0]].emit(mqName, mqParam, mqKey, mqDoing);
+                } else {
+                    mqAdd(mess);
+                }
+            });
+        }
+    });   
+
+    process.on('exit', (code) => {
+        j.cancel();
+    });
 }
 
 module.exports = {
     mqAdd,
     mqDoing,
-    mqAck
+    mqAck,
+    mqCheckPend
 }
