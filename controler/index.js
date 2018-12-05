@@ -1,13 +1,34 @@
 const {redisServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
-const {PENDINGKEY, DOINGKEY, ERRORKEY, MQKEYJOIN,
-    CHECKPENDSCHEDULESPE, CHECKDOINGSCHEDULESPE, HOURGETUPDATESCHEDULESPE,
-    ROOMCRAWLERNAME, MQAUTO
-} = require('./const');
-const {STARTHOURUPDATE} = require('./taskName');
-let checkPendSchedule = null, checkDoingSchedule = null;
 
+const {PENDINGKEY, DOINGKEY, ERRORKEY, MQKEYJOIN, ROOMCRAWLERNAME, MQAUTO, 
+    CHECKPENDSCHEDULESPE, CHECKDOINGSCHEDULESPE, HOURGETUPDATESCHEDULESPE, ZEROPOINTSCHEDULESPE
+} = require('./const');
+const {STARTNORMALHOURUPDATE, STARTZEROPOINTUPDATE} = require('./taskName');
+
+let checkPendSchedule = null,
+    checkDoingSchedule = null,
+    normalHourSchedule = null,
+    zeroPointSchedule = null;
+
+/** 
+ * 退出取消定时任务 && 回收变量
+ */
+process.on('exit', () => {
+    if (checkPendSchedule) checkPendSchedule.cancel();
+    if (checkDoingSchedule) checkDoingSchedule.cancel();
+    if (normalHourSchedule) normalHourSchedule.cancel();
+    if (zeroPointSchedule) zeroPointSchedule.cancel();
+    scheduleMess('All', -1);
+    checkPendSchedule = checkDoingSchedule = normalHourSchedule = zeroPointSchedule =null;
+});
+
+/**
+ * @description 定时任务输出
+ * @param {*} type 类型
+ * @param {*} status 状态 [-1, 0, 1]
+ */
 const scheduleMess = (type, status) => {
     let s;
     if (status === -1)  s = '结束';
@@ -17,13 +38,11 @@ const scheduleMess = (type, status) => {
     console.log(`${s} ${type} 定时器任务.`);
 }
 
-process.on('exit', () => {
-    if (checkPendSchedule) checkPendSchedule.cancel();
-    if (checkDoingSchedule) checkDoingSchedule.cancel();
-    scheduleMess('All', -1);
-    checkPendSchedule = checkDoingSchedule = null;
-});
-
+/**
+ * @description 添加任务
+ * @param {String|Array} mess socket.id||taskName||JSON.stringify(paramObj)
+ * paramObj = {room?, socketId?, ...}
+ */
 const mqAdd = async (mess) => {
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(PENDINGKEY, ...mess) : 
@@ -34,6 +53,11 @@ const mqAdd = async (mess) => {
     scheduleMess('All', 1);
 }
 
+/**
+ * @description 处理正在处理的任务
+ * @param {String} mess
+ * @returns
+ */
 const mqDoing = async (mess) => {
     if (mess) {
         await redisServer.hmSet(DOINGKEY, {
@@ -45,6 +69,10 @@ const mqDoing = async (mess) => {
     return;
 }
 
+/**
+ * @description 处理完成的任务
+ * @param {String||Array} mess
+ */
 const mqAck = async (mess) => {
     await redisServer.actionForClient(client => 
         Array.isArray(mess) ? client.HDELAsync(DOINGKEY, ...mess) : 
@@ -52,6 +80,10 @@ const mqAck = async (mess) => {
     );
 }
 
+/**
+ * @description 处理失败的任务
+ * @param {String||Array} mess
+ */
 const mqError = async (mess) => {
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(ERRORKEY, ...mess) : 
@@ -59,6 +91,11 @@ const mqError = async (mess) => {
     );
 }
 
+/**
+ * @description 定时检查pending队列任务
+ * @param {*} io
+ * @param {*} ioSocket
+ */
 const mqCheckPend = (io, ioSocket) =>{
     checkPendSchedule = schedule.scheduleJob(CHECKPENDSCHEDULESPE, async () => {
         scheduleMess('CheckPend', 1);
@@ -98,6 +135,9 @@ const mqCheckPend = (io, ioSocket) =>{
     });
 }
 
+/**
+ * @description 定时检查doing队列任务
+ */
 const mqCheckDoing = () => {
     checkDoingSchedule = schedule.scheduleJob(CHECKDOINGSCHEDULESPE, async () => {
         scheduleMess('CheckDoing', 1);
@@ -121,16 +161,30 @@ const mqCheckDoing = () => {
     });   
 }
 
-const mqGetHourUpdateTask = () => {
-    schedule.scheduleJob(HOURGETUPDATESCHEDULESPE, () => {
+/**
+ * @description 定时触发添加获取今日更新任务
+ */
+const mqStartNormalHourUpdateTask = () => {
+    normalHourSchedule = schedule.scheduleJob(HOURGETUPDATESCHEDULESPE, () => {
         let param = {
             room: ROOMCRAWLERNAME
         }
-        let taskName = MQAUTO+MQKEYJOIN+STARTHOURUPDATE+MQKEYJOIN+JSON.stringify(param);
+        let taskName = MQAUTO+MQKEYJOIN+STARTNORMALHOURUPDATE+MQKEYJOIN+JSON.stringify(param);
         mqAdd(taskName);
         param = taskName = null;
     }); 
 };
+
+const mqStartZeroPointUpdateTask = () => {
+    zeroPointSchedule = schedule.scheduleJob(ZEROPOINTSCHEDULESPE, () => {
+        let param = {
+            room: ROOMCRAWLERNAME
+        }
+        let taskName = MQAUTO+MQKEYJOIN+STARTZEROPOINTUPDATE+MQKEYJOIN+JSON.stringify(param);
+        mqAdd(taskName);
+        param = taskName = null;
+    });
+}
 
 module.exports = {
     mqAdd,
@@ -139,5 +193,6 @@ module.exports = {
     mqError,
     mqCheckPend,
     mqCheckDoing,
-    mqGetHourUpdateTask
+    mqStartNormalHourUpdateTask,
+    mqStartZeroPointUpdateTask
 }

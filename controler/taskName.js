@@ -8,7 +8,8 @@ const STARTCRAWLERBYCH = 'start-crawler-ch';
 const FINISHCRAWLERBYCH = 'finish-crawler-ch';
 const ERRORCRAWLERBYCH = 'error-crawler-ch';
 
-const STARTHOURUPDATE = 'get-hour-update';
+const STARTNORMALHOURUPDATE = 'start-normalHour-update';
+const STARTZEROPOINTUPDATE = 'start-zeroPoint-update';
 const FINISHHOURUPDATE = 'finish-hour-update';
 
 const STARTUPDATETODAYCOMIC = 'update-redis-todayComic';
@@ -21,7 +22,8 @@ module.exports = {
     STARTCRAWLERBYCH,
     FINISHCRAWLERBYCH,
     ERRORCRAWLERBYCH,
-    STARTHOURUPDATE,
+    STARTNORMALHOURUPDATE,
+    STARTZEROPOINTUPDATE,
     FINISHHOURUPDATE,
     STARTUPDATETODAYCOMIC
 }
