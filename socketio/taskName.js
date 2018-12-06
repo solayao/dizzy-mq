@@ -13,6 +13,9 @@ const STARTZEROPOINTUPDATE = 'start-zeroPoint-update';
 const FINISHHOURUPDATE = 'finish-hour-update';
 
 const STARTUPDATETODAYCOMIC = 'update-redis-todayComic';
+const FINISHUPDATETODAYCOMIC = 'finish-redis-update-todayComic';
+
+const STARTUPDATECHAPTER = 'start-update-chapter';
 
 module.exports = {
     JOINCRAWLER,
@@ -25,5 +28,7 @@ module.exports = {
     STARTNORMALHOURUPDATE,
     STARTZEROPOINTUPDATE,
     FINISHHOURUPDATE,
-    STARTUPDATETODAYCOMIC
+    STARTUPDATETODAYCOMIC,
+    FINISHUPDATETODAYCOMIC,
+    STARTUPDATECHAPTER
 }

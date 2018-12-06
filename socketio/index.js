@@ -1,7 +1,19 @@
 const io = require('socket.io')();
-
-const {mqAck, mqAdd, mqError, mqCheckPend, mqCheckDoing, mqStartNormalHourUpdateTask} = require('../controler');
-const {MQKEYJOIN, ROOMCRAWLERNAME, ROOMCRUDNAME} = require('../controler/const');
+const {
+    mqAck, 
+    mqAdd, 
+    mqError, 
+    mqCheckPend, 
+    mqCheckDoing, 
+    mqStartNormalHourUpdateTask,
+    mqStartZeroPointUpdateTask
+} = require('../controler');
+const {
+    MQAUTO,
+    MQKEYJOIN, 
+    ROOMCRAWLERNAME, 
+    ROOMCRUDNAME
+} = require('../controler/const');
 const {  
     JOINCRAWLER,
     JOINCRUD,
@@ -11,8 +23,10 @@ const {
     FINISHCRAWLERBYCH,
     ERRORCRAWLERBYCH,
     FINISHHOURUPDATE,
-    STARTUPDATETODAYCOMIC
-} = require('../controler/taskName');
+    STARTUPDATETODAYCOMIC,
+    FINISHUPDATETODAYCOMIC,
+    STARTUPDATECHAPTER
+} = require('./taskName');
 let ioSocket = {};
 
 process.on('exit', () => {
@@ -50,10 +64,22 @@ io.on('connection', socket => {
     });
     /* 完成通过Ch去查询comic内容 */
     socket.on(FINISHCRAWLERBYCH, (mqKey, imgList) => {
-        let returnSocket = ioSocket[mqKey.split(MQKEYJOIN)[0]];
+        let mqKeyValList = mqKey.split(MQKEYJOIN);
+        let returnSocket = ioSocket[mqKeyValList[0]];
         if (returnSocket) returnSocket.emit(BACKCRAWLERBYCH, imgList);
         else console.log('socket连接不存在');
         mqAck(mqKey);
+        if (imgList.length > 0) {
+            let param = {
+                room: ROOMCRUDNAME,
+                ch: JSON.parse(mqKeyValList[2]).ch,
+                imgList: imgList
+            };
+            let taskName = MQAUTO+MQKEYJOIN+STARTUPDATECHAPTER+MQKEYJOIN+JSON.stringify(param);
+            mqAdd(taskName);
+            param = taskName = null;
+        }
+        mqKeyValList = null;
     });
     /* 通过Ch去查询comic内容报错 */
     socket.on(ERRORCRAWLERBYCH, mqKey => {
@@ -69,6 +95,10 @@ io.on('connection', socket => {
         mqAdd(taskName);
         param = taskName = null;
     });
+    /* 完成把redis的今日更新漫画更新到mongo */
+    socket.on(FINISHUPDATETODAYCOMIC, mqKey => {
+        mqAck(mqKey);
+    });
 });
 /* 定时检查pending列表 */
 mqCheckPend(io, ioSocket);
@@ -76,5 +106,6 @@ mqCheckPend(io, ioSocket);
 mqCheckDoing();
 /* 定时触发查询今日更新 */
 mqStartNormalHourUpdateTask();
+mqStartZeroPointUpdateTask();
 
 module.exports = io;

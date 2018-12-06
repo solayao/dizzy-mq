@@ -5,7 +5,7 @@ const {isNotEmpty} = require('dizzyl-util/es/type');
 const {PENDINGKEY, DOINGKEY, ERRORKEY, MQKEYJOIN, ROOMCRAWLERNAME, MQAUTO, 
     CHECKPENDSCHEDULESPE, CHECKDOINGSCHEDULESPE, HOURGETUPDATESCHEDULESPE, ZEROPOINTSCHEDULESPE
 } = require('./const');
-const {STARTNORMALHOURUPDATE, STARTZEROPOINTUPDATE} = require('./taskName');
+const {STARTNORMALHOURUPDATE, STARTZEROPOINTUPDATE} = require('../socketio/taskName');
 
 let checkPendSchedule = null,
     checkDoingSchedule = null,
@@ -166,23 +166,27 @@ const mqCheckDoing = () => {
  */
 const mqStartNormalHourUpdateTask = () => {
     normalHourSchedule = schedule.scheduleJob(HOURGETUPDATESCHEDULESPE, () => {
+        scheduleMess('NormalHourUpdateTask', 1);        
         let param = {
             room: ROOMCRAWLERNAME
         }
         let taskName = MQAUTO+MQKEYJOIN+STARTNORMALHOURUPDATE+MQKEYJOIN+JSON.stringify(param);
         mqAdd(taskName);
         param = taskName = null;
+        scheduleMess('NormalHourUpdateTask', -1);
     }); 
 };
 
 const mqStartZeroPointUpdateTask = () => {
     zeroPointSchedule = schedule.scheduleJob(ZEROPOINTSCHEDULESPE, () => {
+        scheduleMess('ZeroPointUpdateTask', 1);        
         let param = {
             room: ROOMCRAWLERNAME
         }
         let taskName = MQAUTO+MQKEYJOIN+STARTZEROPOINTUPDATE+MQKEYJOIN+JSON.stringify(param);
         mqAdd(taskName);
         param = taskName = null;
+        scheduleMess('ZeroPointUpdateTask', -1);
     });
 }
 
