@@ -1,34 +1,36 @@
 const JOINCRAWLER = 'join-Crawlerroom';
 const JOINCRUD = 'join-CRUDroom';
 
-const CRAWLERBYCH = 'addMQ-crawlerCH';
-const BACKCRAWLERBYCH = 'finishMQ-crawlerCH';
+const MQTASKFINISH = 'mq-task-finish';
+const MQTASKERROR = 'mq-task-error';
 
-const STARTCRAWLERBYCH = 'start-crawler-ch';
-const FINISHCRAWLERBYCH = 'finish-crawler-ch';
-const ERRORCRAWLERBYCH = 'error-crawler-ch';
+const FECRAWLERCH = 'fe-crawelr-by-ch';
+const FEBACKCRAWLERCH = 'fe-craweler-by-ch-back';
 
-const STARTNORMALHOURUPDATE = 'start-normalHour-update';
-const STARTZEROPOINTUPDATE = 'start-zeroPoint-update';
-const FINISHHOURUPDATE = 'finish-hour-update';
+const CWSTARTCH = 'crawler-start-c-by-ch';
+const CWFINISHCH = 'crawler-finish-c-by-ch';
+const CWCOMPARECOMIC = 'crawler-compare-comic';
+const CWNORMALHOURUPDATE = 'crawler-normal-hour-update';
+const CWZEROPOINTUPDATE = 'crawler-zero-point-update';
 
-const STARTUPDATETODAYCOMIC = 'update-redis-todayComic';
-const FINISHUPDATETODAYCOMIC = 'finish-redis-update-todayComic';
-
-const STARTUPDATECHAPTER = 'start-update-chapter';
+const BEUPDATECHAPTER = 'curd-update-chapter';
+const BECOMPARECOMIC = 'curd-compare-comic';
 
 module.exports = {
     JOINCRAWLER,
     JOINCRUD,
-    CRAWLERBYCH,
-    BACKCRAWLERBYCH,
-    STARTCRAWLERBYCH,
-    FINISHCRAWLERBYCH,
-    ERRORCRAWLERBYCH,
-    STARTNORMALHOURUPDATE,
-    STARTZEROPOINTUPDATE,
-    FINISHHOURUPDATE,
-    STARTUPDATETODAYCOMIC,
-    FINISHUPDATETODAYCOMIC,
-    STARTUPDATECHAPTER
+    MQTASKFINISH,
+    MQTASKERROR,
+
+    FECRAWLERCH,
+    FEBACKCRAWLERCH,
+
+    CWSTARTCH,
+    CWFINISHCH,
+    CWCOMPARECOMIC,
+    CWNORMALHOURUPDATE,
+    CWZEROPOINTUPDATE
+
+    BEUPDATECHAPTER,
+    BECOMPARECOMIC,
 }

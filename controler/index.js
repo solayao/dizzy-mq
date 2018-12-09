@@ -2,11 +2,22 @@ const {redisServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
 
-const {PENDINGKEY, DOINGKEY, ERRORKEY, MQKEYJOIN, ROOMCRAWLERNAME, MQAUTO, 
-    CHECKPENDSCHEDULESPE, CHECKDOINGSCHEDULESPE, HOURGETUPDATESCHEDULESPE, ZEROPOINTSCHEDULESPE
-} = require('./const');
-const {STARTNORMALHOURUPDATE, STARTZEROPOINTUPDATE} = require('../socketio/taskName');
-
+const {
+    PENDINGKEY, 
+    DOINGKEY, 
+    ERRORKEY, 
+    MQKEYJOIN, 
+    ROOMCRAWLERNAME, 
+    MQAUTO, 
+    CHECKPENDSCHEDULESPE, 
+    CHECKDOINGSCHEDULESPE, 
+    HOURGETUPDATESCHEDULESPE, 
+    ZEROPOINTSCHEDULESPE
+} = require( './const'))
+const {
+    CWNORMALHOURUPDATE, 
+    CWZEROPOINTUPDATE,
+} = require( '../socketio/taskName'))
 let checkPendSchedule = null,
     checkDoingSchedule = null,
     normalHourSchedule = null,
@@ -36,6 +47,17 @@ const scheduleMess = (type, status) => {
     else s = '启动';
 
     console.log(`${s} ${type} 定时器任务.`);
+}
+
+/**
+ * @description 创建MQ的任务名称
+ * @param {*} socketid
+ * @param {*} taskName
+ * @param {*} params
+ * @returns
+ */
+const createMQTaskName = (socketid, taskName, params) => {
+    return socketid+MQKEYJOIN+taskName+MQKEYJOIN+JSON.stringify(params);
 }
 
 /**
@@ -170,7 +192,7 @@ const mqStartNormalHourUpdateTask = () => {
         let param = {
             room: ROOMCRAWLERNAME
         }
-        let taskName = MQAUTO+MQKEYJOIN+STARTNORMALHOURUPDATE+MQKEYJOIN+JSON.stringify(param);
+        let taskName = createMQTaskName(MQAUTO, CWNORMALHOURUPDATE, param);
         mqAdd(taskName);
         param = taskName = null;
         scheduleMess('NormalHourUpdateTask', -1);
@@ -183,7 +205,7 @@ const mqStartZeroPointUpdateTask = () => {
         let param = {
             room: ROOMCRAWLERNAME
         }
-        let taskName = MQAUTO+MQKEYJOIN+STARTZEROPOINTUPDATE+MQKEYJOIN+JSON.stringify(param);
+        let taskName = createMQTaskName(MQAUTO, CWZEROPOINTUPDATE, param);
         mqAdd(taskName);
         param = taskName = null;
         scheduleMess('ZeroPointUpdateTask', -1);
@@ -191,6 +213,7 @@ const mqStartZeroPointUpdateTask = () => {
 }
 
 module.exports = {
+    createMQTaskName,
     mqAdd,
     mqDoing,
     mqAck,
