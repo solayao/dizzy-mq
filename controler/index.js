@@ -13,11 +13,11 @@ const {
     CHECKDOINGSCHEDULESPE, 
     HOURGETUPDATESCHEDULESPE, 
     ZEROPOINTSCHEDULESPE
-} = require( './const'))
+} = require( './const');
 const {
     CWNORMALHOURUPDATE, 
     CWZEROPOINTUPDATE,
-} = require( '../socketio/taskName'))
+} = require( '../socketio/taskName');
 let checkPendSchedule = null,
     checkDoingSchedule = null,
     normalHourSchedule = null,
@@ -140,18 +140,12 @@ const mqCheckPend = (io, ioSocket) =>{
                 }
             })
         } else if (mqParam.hasOwnProperty('socketId')) {
-            
+            if (ioSocket[socketId]) {
+                ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+            } else {
+                mqAdd(mqKey);
+            }
         }
-        // if (mqName === 'start-crawler-ch') {
-        //     io.to('crawler').clients((error, clients) => {
-        //         if (error) throw error;
-        //         if (clients[0]) {
-        //             ioSocket[clients[0]].emit(mqName, mqParam, mqKey, mqDoing);
-        //         } else {
-        //             mqAdd(mqKey);
-        //         }
-        //     });
-        // }
         mess = mqKeyList = null;
         scheduleMess('CheckPend', -1);
     });
