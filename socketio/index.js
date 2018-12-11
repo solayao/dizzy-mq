@@ -3,7 +3,9 @@ const {
     createMQTaskName,
     mqAck, 
     mqAdd, 
+    mqAddFirst,
     mqError, 
+    mqDoing,
     mqCheckPend, 
     mqCheckDoing, 
     mqStartNormalHourUpdateTask,
@@ -22,7 +24,9 @@ const {
     MQTASKERROR,
     FECRAWLERCH,
     FEBACKCRAWLERCH,
+    FECRAWLERBYID,
     CWSTARTCH,
+    CWSTARTID,
     CWFINISHCH,
     CWCOMPARECOMIC,
     BEUPDATECHAPTER,
@@ -61,15 +65,23 @@ io.on('connection', socket => {
         console.log(`join ${ROOMCRUDNAME} room ${socket.id}`);
     });
 
-    /* 通过Ch去查询comic内容 */
+    /* 通过Ch去查询comic内容, 立即触发 */
     socket.on(FECRAWLERCH, ch => {
         let param = {
             ch,
             room: ROOMCRAWLERNAME
         };
         let taskName = createMQTaskName(socket.id, CWSTARTCH, param);
-        mqAdd(taskName);
-        param = taskName = null;
+        // mqAddFirst(taskName);
+        io.to(ROOMCRAWLERNAME).clients((error, clients) => {
+            if (error) throw error;
+            if (clients[0]) {
+                ioSocket[clients[0]].emit(CWSTARTCH, JSON.stringify(param), taskName, mqDoing);
+            } else {
+                mqAddFirst(taskName);
+            }
+            param = taskName = null;
+        })
     });
 
     /* 完成通过Ch去查询comic内容 */
@@ -99,6 +111,16 @@ io.on('connection', socket => {
             detail: latestComicDetailObj
         };
         let taskName = createMQTaskName(MQAUTO, BECOMPARECOMIC, param);
+        mqAdd(taskName);
+        param = taskName = null;
+    });
+    /* 通过漫画id添加查询最新任务*/
+    socket.on(FECRAWLERBYID, id => {
+        let param = {
+            comicId:id,
+            room: ROOMCRAWLERNAME
+        };
+        let taskName = createMQTaskName(socket.id, CWSTARTID, param);
         mqAdd(taskName);
         param = taskName = null;
     })

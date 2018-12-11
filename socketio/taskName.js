@@ -6,8 +6,10 @@ const MQTASKERROR = 'mq-task-error';
 
 const FECRAWLERCH = 'fe-crawelr-by-ch';
 const FEBACKCRAWLERCH = 'fe-craweler-by-ch-back';
+const FECRAWLERBYID = 'fe-crawelr-latest';
 
 const CWSTARTCH = 'crawler-start-c-by-ch';
+const CWSTARTID = 'crawler-start-c-by-id';
 const CWFINISHCH = 'crawler-finish-c-by-ch';
 const CWCOMPARECOMIC = 'crawler-compare-comic';
 const CWNORMALHOURUPDATE = 'crawler-normal-hour-update';
@@ -24,8 +26,10 @@ module.exports = {
 
     FECRAWLERCH,
     FEBACKCRAWLERCH,
+    FECRAWLERBYID,
 
     CWSTARTCH,
+    CWSTARTID,
     CWFINISHCH,
     CWCOMPARECOMIC,
     CWNORMALHOURUPDATE,

@@ -1,7 +1,6 @@
 const {redisServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
-
 const {
     PENDINGKEY, 
     DOINGKEY, 
@@ -18,8 +17,8 @@ const {
     CWNORMALHOURUPDATE, 
     CWZEROPOINTUPDATE,
 } = require( '../socketio/taskName');
-let checkPendSchedule = null,
-    checkDoingSchedule = null,
+let checkPendSchedule = null, checkPend = true,
+    checkDoingSchedule = null, checkDoing = true,
     normalHourSchedule = null,
     zeroPointSchedule = null;
 
@@ -27,8 +26,14 @@ let checkPendSchedule = null,
  * 退出取消定时任务 && 回收变量
  */
 process.on('exit', () => {
-    if (checkPendSchedule) checkPendSchedule.cancel();
-    if (checkDoingSchedule) checkDoingSchedule.cancel();
+    if (checkPendSchedule) {
+        checkPendSchedule.cancel();
+        checkPend = false;
+    }
+    if (checkDoingSchedule) {
+        checkDoingSchedule.cancel();
+        checkDoing = false;
+    }
     if (normalHourSchedule) normalHourSchedule.cancel();
     if (zeroPointSchedule) zeroPointSchedule.cancel();
     scheduleMess('All', -1);
@@ -61,6 +66,30 @@ const createMQTaskName = (socketid, taskName, params) => {
 }
 
 /**
+ * @description 重新启动检查任务
+ */
+const restartCheck = () => {
+    if (checkPendSchedule && !checkPend)
+        checkPendSchedule.reschedule(CHECKPENDSCHEDULESPE);
+    if (checkDoingSchedule && !checkDoing)
+        checkDoingSchedule.reschedule(CHECKDOINGSCHEDULESPE);
+    scheduleMess('All', 1);
+}
+
+/**
+ * @description 添加优先任务
+ * @param {String|Array} mess socket.id||taskName||JSON.stringify(paramObj)
+ * paramObj = {room?, socketId?, ...}
+ */
+const mqAddFirst = async (mess) => {
+    await redisServer.actionForClient(client =>
+        Array.isArray(mess) ? client.LPUSHAsync(PENDINGKEY, ...mess) : 
+            client.LPUSHAsync(PENDINGKEY, mess)
+    );
+    restartCheck();
+}
+
+/**
  * @description 添加任务
  * @param {String|Array} mess socket.id||taskName||JSON.stringify(paramObj)
  * paramObj = {room?, socketId?, ...}
@@ -70,9 +99,7 @@ const mqAdd = async (mess) => {
         Array.isArray(mess) ? client.RPUSHAsync(PENDINGKEY, ...mess) : 
             client.RPUSHAsync(PENDINGKEY, mess)
     );
-    if (checkPendSchedule) checkPendSchedule.reschedule(CHECKPENDSCHEDULESPE);
-    if (checkDoingSchedule) checkDoingSchedule.reschedule(CHECKDOINGSCHEDULESPE);
-    scheduleMess('All', 1);
+    restartCheck();
 }
 
 /**
@@ -107,6 +134,7 @@ const mqAck = async (mess) => {
  * @param {String||Array} mess
  */
 const mqError = async (mess) => {
+    await mqAck(mess);
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(ERRORKEY, ...mess) : 
             client.RPUSHAsync(ERRORKEY, mess)
@@ -125,6 +153,7 @@ const mqCheckPend = (io, ioSocket) =>{
         let mqKey = mess ? mess[1] : null;
         if (!mqKey) {
             checkPendSchedule.cancelNext();
+            checkPend = false;
             scheduleMess('CheckPend', 0);
             return;
         }
@@ -169,6 +198,7 @@ const mqCheckDoing = () => {
             nowTimestamp = timeoutKeyList = null;
         } else {
             checkDoingSchedule.cancelNext();
+            checkDoing = false;
             scheduleMess('CheckDoing', 0);
             return;
         }
@@ -209,6 +239,7 @@ const mqStartZeroPointUpdateTask = () => {
 module.exports = {
     createMQTaskName,
     mqAdd,
+    mqAddFirst,
     mqDoing,
     mqAck,
     mqError,
