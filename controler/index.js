@@ -17,6 +17,8 @@ const {
     CWNORMALHOURUPDATE, 
     CWZEROPOINTUPDATE,
 } = require( '../socketio/taskName');
+const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
+
 let checkPendSchedule = null, checkPend = true,
     checkDoingSchedule = null, checkDoing = true,
     normalHourSchedule = null,
@@ -134,7 +136,6 @@ const mqAck = async (mess) => {
  * @param {String||Array} mess
  */
 const mqError = async (mess) => {
-    await mqAck(mess);
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(ERRORKEY, ...mess) : 
             client.RPUSHAsync(ERRORKEY, mess)
@@ -162,15 +163,29 @@ const mqCheckPend = (io, ioSocket) =>{
         if (mqParam.hasOwnProperty('room')) {
             io.to(mqParam.room).clients((error, clients) => {
                 if (error) throw error;
+                let opt = {
+                    title: 'MQ Task Start',
+                    pathName: __filename,
+                    message: mqKey
+                }
                 if (clients[0]) {
                     ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+                    SuccessConsole(opt);
+                    opt = null;
                 } else {
                     mqAdd(mqKey);
                 }
             })
         } else if (mqParam.hasOwnProperty('socketId')) {
             if (ioSocket[socketId]) {
+                let opt = {
+                    title: 'MQ Task Start',
+                    pathName: __filename,
+                    message: mqKey
+                }
                 ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+                SuccessConsole(opt);
+                opt = null;
             } else {
                 mqAdd(mqKey);
             }
@@ -248,3 +263,15 @@ module.exports = {
     mqStartNormalHourUpdateTask,
     mqStartZeroPointUpdateTask
 }
+
+// (() => {
+//     const {createMQTaskName, mqAdd} = require('./')
+//     const {MQAUTO, ROOMCRAWLERNAME} = require('../controler/const');
+//     const {CWNORMALHOURUPDATE} = require('../socketio/taskName')
+//     let param = {
+//         room: ROOMCRAWLERNAME
+//     }
+//     let taskName = createMQTaskName(MQAUTO, CWNORMALHOURUPDATE, param);
+//     mqAdd(taskName);
+//     param = taskName = null;
+// })()

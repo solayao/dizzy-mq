@@ -15,8 +15,8 @@ const CWCOMPARECOMIC = 'crawler-compare-comic';
 const CWNORMALHOURUPDATE = 'crawler-normal-hour-update';
 const CWZEROPOINTUPDATE = 'crawler-zero-point-update';
 
-const BEUPDATECHAPTER = 'curd-update-chapter';
-const BECOMPARECOMIC = 'curd-compare-comic';
+const BEUPDATECHAPTER = 'crud-update-chapter';
+const BECOMPARECOMIC = 'crud-compare-comic';
 
 module.exports = {
     JOINCRAWLER,
