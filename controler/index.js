@@ -84,6 +84,8 @@ const restartCheck = () => {
  * paramObj = {room?, socketId?, ...}
  */
 const mqAddFirst = async (mess) => {
+    if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
+
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.LPUSHAsync(PENDINGKEY, ...mess) : 
             client.LPUSHAsync(PENDINGKEY, mess)
@@ -97,6 +99,8 @@ const mqAddFirst = async (mess) => {
  * paramObj = {room?, socketId?, ...}
  */
 const mqAdd = async (mess) => {
+    if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
+
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(PENDINGKEY, ...mess) : 
             client.RPUSHAsync(PENDINGKEY, mess)
@@ -125,6 +129,8 @@ const mqDoing = async (mess) => {
  * @param {String||Array} mess
  */
 const mqAck = async (mess) => {
+    if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
+
     await redisServer.actionForClient(client => 
         Array.isArray(mess) ? client.HDELAsync(DOINGKEY, ...mess) : 
             client.HDELAsync(DOINGKEY, mess)
@@ -136,6 +142,8 @@ const mqAck = async (mess) => {
  * @param {String||Array} mess
  */
 const mqError = async (mess) => {
+    if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
+
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client.RPUSHAsync(ERRORKEY, ...mess) : 
             client.RPUSHAsync(ERRORKEY, mess)
