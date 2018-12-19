@@ -114,6 +114,7 @@ io.on('connection', socket => {
         mqAdd(taskName);
         param = taskName = null;
     });
+
     /* 通过漫画id添加查询最新任务*/
     socket.on(FECRAWLERBYID, id => {
         let param = {
@@ -123,7 +124,7 @@ io.on('connection', socket => {
         let taskName = createMQTaskName(socket.id, CWSTARTID, param);
         mqAdd(taskName);
         param = taskName = null;
-    })
+    });
 });
 /* 定时检查pending列表 */
 mqCheckPend(io, ioSocket);

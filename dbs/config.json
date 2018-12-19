@@ -1,17 +1,11 @@
 {
     "redisConfig": {
-        "host": "47.98.186.3",
+        "host": "127.0.0.1",
         "port": 6379,
         "password": "LCB.20131011.wq"
     },
     "mongoConfig": {
-        "host": "47.98.186.3",
-        "port": 1011,
-        "user": "root",
-        "pass": "LCB.20131011.wq",
-        "search": {
-            "authSource": "admin",
-            "authMechanism": "SCRAM-SHA-1"
-        }
+        "host": "127.0.0.1",
+        "port": 27017
     }
 }
