@@ -214,7 +214,7 @@ const mqCheckDoing = () => {
             let nowTimestamp = new Date().valueOf();
             let timeoutKeyList = Object.keys(doingObj).filter(key => {
                 let val = JSON.parse(doingObj[key]);
-                return nowTimestamp - val.timestamp > 60 * 1000;
+                return (nowTimestamp - val.timestamp) > 60 * 1000;
             });
             await mqAck(timeoutKeyList);
             await mqAdd(timeoutKeyList);

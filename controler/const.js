@@ -6,7 +6,7 @@ const ROOMCRAWLERNAME = 'crawler';
 const ROOMCRUDNAME = 'crud';
 const MQAUTO = 'MQAUTO';
 
-const CHECKPENDSCHEDULESPE = '*/10 * * * * *';
+const CHECKPENDSCHEDULESPE = '*/2 * * * * *';
 const CHECKDOINGSCHEDULESPE = '0 * * * * *';
 const HOURGETUPDATESCHEDULESPE = '0 0 1-23 * * *';
 const ZEROPOINTSCHEDULESPE = '0 30 0 * * *';

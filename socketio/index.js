@@ -131,7 +131,7 @@ mqCheckPend(io, ioSocket);
 /* 定时检查doing列表 */
 mqCheckDoing();
 /* 定时触发查询今日更新 */
-mqStartNormalHourUpdateTask();
-mqStartZeroPointUpdateTask();
+// mqStartNormalHourUpdateTask();
+// mqStartZeroPointUpdateTask();
 
 module.exports = io;
