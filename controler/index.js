@@ -19,7 +19,7 @@ const {
 } = require( '../socketio/taskName');
 const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
-let checkPendSchedule = null, checkPend = true,
+let checkPendSchedule = null, checkPend = true, pendLooping = false,
     checkDoingSchedule = null, checkDoing = true,
     normalHourSchedule = null,
     zeroPointSchedule = null;
@@ -71,11 +71,14 @@ const createMQTaskName = (socketid, taskName, params) => {
  * @description 重新启动检查任务
  */
 const restartCheck = () => {
-    if (checkPendSchedule && !checkPend)
+    if (checkPendSchedule && !checkPend) {
         checkPendSchedule.reschedule(CHECKPENDSCHEDULESPE);
-    if (checkDoingSchedule && !checkDoing)
+        scheduleMess('CheckPend', 1);
+    }
+    if (checkDoingSchedule && !checkDoing) {
         checkDoingSchedule.reschedule(CHECKDOINGSCHEDULESPE);
-    scheduleMess('All', 1);
+        scheduleMess('CheckDoing', 1);
+    }
 }
 
 /**
@@ -150,6 +153,43 @@ const mqError = async (mess) => {
     );
 }
 
+const mqPendResolute = (mqKey, io, ioSocket) => {
+    let mqKeyList = mqKey.split(MQKEYJOIN);
+    let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
+    if (mqParam.hasOwnProperty('room')) {
+        io.to(mqParam.room).clients((error, clients) => {
+            if (error) throw error;
+            let opt = {
+                title: 'MQ Task Start',
+                pathName: __filename,
+                message: mqKey
+            }
+            if (clients[0]) {
+                ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+                SuccessConsole(opt);
+                opt = null;
+            } else {
+                mqAdd(mqKey);
+            }
+        })
+    } else if (mqParam.hasOwnProperty('socketId')) {
+        if (ioSocket[socketId]) {
+            let opt = {
+                title: 'MQ Task Start',
+                pathName: __filename,
+                message: mqKey
+            }
+            ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+            SuccessConsole(opt);
+            opt = null;
+        } else {
+            mqAdd(mqKey);
+        }
+    }
+    mqKeyList = null;
+    return;
+}
+
 /**
  * @description 定时检查pending队列任务
  * @param {*} io
@@ -158,47 +198,21 @@ const mqError = async (mess) => {
 const mqCheckPend = (io, ioSocket) =>{
     checkPendSchedule = schedule.scheduleJob(CHECKPENDSCHEDULESPE, async () => {
         scheduleMess('CheckPend', 1);
-        let mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 7));
-        let mqKey = mess ? mess[1] : null;
-        if (!mqKey) {
-            checkPendSchedule.cancelNext();
-            checkPend = false;
-            scheduleMess('CheckPend', 0);
-            return;
-        }
-        let mqKeyList = mqKey.split(MQKEYJOIN);
-        let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
-        if (mqParam.hasOwnProperty('room')) {
-            io.to(mqParam.room).clients((error, clients) => {
-                if (error) throw error;
-                let opt = {
-                    title: 'MQ Task Start',
-                    pathName: __filename,
-                    message: mqKey
-                }
-                if (clients[0]) {
-                    ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
-                    SuccessConsole(opt);
-                    opt = null;
-                } else {
-                    mqAdd(mqKey);
-                }
-            })
-        } else if (mqParam.hasOwnProperty('socketId')) {
-            if (ioSocket[socketId]) {
-                let opt = {
-                    title: 'MQ Task Start',
-                    pathName: __filename,
-                    message: mqKey
-                }
-                ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
-                SuccessConsole(opt);
-                opt = null;
-            } else {
-                mqAdd(mqKey);
+        if (pendLooping) checkPendSchedule.cancelNext();
+        let loopKey = true;
+        do {
+            pendLooping = true;
+            let mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 5));
+            let mqKey = mess ? mess[1] : null;
+            if (mqKey === null) {
+                loopKey = false;
+                checkPend = false;
+                pendLooping = false;
+                scheduleMess('CheckPend', 0);
             }
-        }
-        mess = mqKeyList = null;
+            else mqPendResolute(mqKey, io, ioSocket);
+        } while (loopKey);
+        mess = null;
         scheduleMess('CheckPend', -1);
     });
 }
