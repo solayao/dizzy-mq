@@ -1,4 +1,4 @@
-const {redisServer} = require('../dbs');
+const {redisServer, mongoServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
 const {
@@ -19,7 +19,7 @@ const {
 } = require( '../socketio/taskName');
 const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
-let checkPendSchedule = null, checkPend = true, pendLooping = false,
+let checkPendSchedule = null, checkPend = true,
     checkDoingSchedule = null, checkDoing = true,
     normalHourSchedule = null,
     zeroPointSchedule = null;
@@ -51,7 +51,8 @@ const scheduleMess = (type, status) => {
     let s;
     if (status === -1)  s = '结束';
     else if (status === 0) s = '暂停';
-    else s = '启动';
+    else if (status === 1) s = '启动';
+    else if (status === 2) s = '重启';
 
     console.log(`${s} ${type} 定时器任务.`);
 }
@@ -73,11 +74,11 @@ const createMQTaskName = (socketid, taskName, params) => {
 const restartCheck = () => {
     if (checkPendSchedule && !checkPend) {
         checkPendSchedule.reschedule(CHECKPENDSCHEDULESPE);
-        scheduleMess('CheckPend', 1);
+        scheduleMess('CheckPend', 2);
     }
     if (checkDoingSchedule && !checkDoing) {
         checkDoingSchedule.reschedule(CHECKDOINGSCHEDULESPE);
-        scheduleMess('CheckDoing', 1);
+        scheduleMess('CheckDoing', 2);
     }
 }
 
@@ -153,7 +154,13 @@ const mqError = async (mess) => {
     );
 }
 
-const mqPendResolute = (mqKey, io, ioSocket) => {
+/**
+ * @description 处理mq-pending
+ * @param {String} mqKey
+ * @param {*} io
+ * @param {*} ioSocket
+ */
+const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
     let mqKeyList = mqKey.split(MQKEYJOIN);
     let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
     if (mqParam.hasOwnProperty('room')) {
@@ -171,6 +178,7 @@ const mqPendResolute = (mqKey, io, ioSocket) => {
             } else {
                 mqAdd(mqKey);
             }
+            resolve();
         })
     } else if (mqParam.hasOwnProperty('socketId')) {
         if (ioSocket[socketId]) {
@@ -185,10 +193,11 @@ const mqPendResolute = (mqKey, io, ioSocket) => {
         } else {
             mqAdd(mqKey);
         }
+        resolve();
     }
     mqKeyList = null;
-    return;
-}
+    resolve();
+})
 
 /**
  * @description 定时检查pending队列任务
@@ -198,20 +207,18 @@ const mqPendResolute = (mqKey, io, ioSocket) => {
 const mqCheckPend = (io, ioSocket) =>{
     checkPendSchedule = schedule.scheduleJob(CHECKPENDSCHEDULESPE, async () => {
         scheduleMess('CheckPend', 1);
-        if (pendLooping) checkPendSchedule.cancelNext();
-        let loopKey = true;
+        let loopKey = 0;
         do {
-            pendLooping = true;
             let mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 5));
             let mqKey = mess ? mess[1] : null;
             if (mqKey === null) {
-                loopKey = false;
+                loopKey = 100;
                 checkPend = false;
-                pendLooping = false;
                 scheduleMess('CheckPend', 0);
             }
-            else mqPendResolute(mqKey, io, ioSocket);
-        } while (loopKey);
+            else await mqPendResolute(mqKey, io, ioSocket);
+            loopKey += 1;
+        } while (loopKey < 10);
         mess = null;
         scheduleMess('CheckPend', -1);
     });
@@ -297,3 +304,15 @@ module.exports = {
 //     mqAdd(taskName);
 //     param = taskName = null;
 // })()
+
+// mongoServer.actionForClient(client => 
+//     client.db('dmgou').collection('comic').find().toArray()
+// ).then(list => redisServer.lPush(PENDINGKEY, list.map(obj => {
+//     let r = createMQTaskName(MQAUTO, 'crawler-dmzj-by-name-update', {
+//         name: obj.n,
+//         author: obj.a,
+//         _id: obj._id,
+//         room: ROOMCRAWLERNAME
+//     });
+//     return r;
+// })))
