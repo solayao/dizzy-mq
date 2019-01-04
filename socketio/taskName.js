@@ -1,5 +1,6 @@
 const JOINCRAWLER = 'join-Crawlerroom';
 const JOINCRUD = 'join-CRUDroom';
+const JOINIMAGE = 'join-Imageroom';
 
 const MQTASKFINISH = 'mq-task-finish';
 const MQTASKERROR = 'mq-task-error';
@@ -17,10 +18,14 @@ const CWZEROPOINTUPDATE = 'crawler-zero-point-update';
 
 const BEUPDATECHAPTER = 'crud-update-chapter';
 const BECOMPARECOMIC = 'crud-compare-comic';
+const BESTARTIMGUPLOAD = 'crud-start-img-upload';
+
+const IMGSTARTUPLOAD = 'image-start-upload';
 
 module.exports = {
     JOINCRAWLER,
     JOINCRUD,
+    JOINIMAGE,
     MQTASKFINISH,
     MQTASKERROR,
 
@@ -37,4 +42,7 @@ module.exports = {
 
     BEUPDATECHAPTER,
     BECOMPARECOMIC,
+    BESTARTIMGUPLOAD,
+
+    IMGSTARTUPLOAD
 }

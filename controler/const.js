@@ -4,6 +4,7 @@ const ERRORKEY = 'mq-error';
 const MQKEYJOIN = '||';
 const ROOMCRAWLERNAME = 'crawler';
 const ROOMCRUDNAME = 'crud';
+const ROOMIMAGE = 'image';
 const MQAUTO = 'MQAUTO';
 
 const CHECKPENDSCHEDULESPE = '*/10 * * * * *';
@@ -18,6 +19,7 @@ module.exports = {
     MQKEYJOIN,
     ROOMCRAWLERNAME,
     ROOMCRUDNAME,
+    ROOMIMAGE,
     MQAUTO,
     CHECKPENDSCHEDULESPE,
     CHECKDOINGSCHEDULESPE,

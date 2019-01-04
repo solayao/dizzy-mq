@@ -15,11 +15,13 @@ const {
     MQAUTO,
     MQKEYJOIN, 
     ROOMCRAWLERNAME, 
-    ROOMCRUDNAME
+    ROOMCRUDNAME,
+    ROOMIMAGE
 } = require('../controler/const');
 const {  
     JOINCRAWLER,
     JOINCRUD,
+    JOINIMAGE,
     MQTASKFINISH,
     MQTASKERROR,
     FECRAWLERCH,
@@ -30,7 +32,9 @@ const {
     CWFINISHCH,
     CWCOMPARECOMIC,
     BEUPDATECHAPTER,
-    BECOMPARECOMIC
+    BECOMPARECOMIC,
+    BESTARTIMGUPLOAD,
+    IMGSTARTUPLOAD
 } = require('./taskName');
 let ioSocket = {};
 
@@ -63,6 +67,11 @@ io.on('connection', socket => {
     socket.on(JOINCRUD, () => {
         socket.join(ROOMCRUDNAME);
         console.log(`join ${ROOMCRUDNAME} room ${socket.id}`);
+    });
+    /* 加入Image房间 */
+    socket.on(JOINIMAGE, () => {
+        socket.join(ROOMIMAGE);
+        console.log(`join ${ROOMIMAGE} room ${socket.id}`);
     });
 
     /* 通过Ch去查询comic内容, 立即触发 */
@@ -122,6 +131,18 @@ io.on('connection', socket => {
             room: ROOMCRAWLERNAME
         };
         let taskName = createMQTaskName(socket.id, CWSTARTID, param);
+        mqAdd(taskName);
+        param = taskName = null;
+    });
+
+    /* 启动漫画图片上传任务*/
+    socket.on(BESTARTIMGUPLOAD, () => {
+        let param = {
+            room: ROOMIMAGE,
+            time: new Date().valueOf(),
+            _all: true
+        };
+        let taskName = createMQTaskName(MQAUTO, IMGSTARTUPLOAD, param);
         mqAdd(taskName);
         param = taskName = null;
     });

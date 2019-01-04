@@ -164,22 +164,29 @@ const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
     let mqKeyList = mqKey.split(MQKEYJOIN);
     let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
     if (mqParam.hasOwnProperty('room')) {
-        io.to(mqParam.room).clients((error, clients) => {
-            if (error) throw error;
-            let opt = {
-                title: 'MQ Task Start',
-                pathName: __filename,
-                message: mqKey
-            }
-            if (clients[0]) {
-                ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
-                SuccessConsole(opt);
-                opt = null;
-            } else {
-                mqAdd(mqKey);
-            }
+        let opt = {
+            title: 'MQ Task Start',
+            pathName: __filename,
+            message: mqKey
+        };
+        if (Boolean(mqParam['_all'])) { // 全局
+            io.to(mqParam.room).emit(mqName, JSON.stringify(mqParam), mqKey);
+            SuccessConsole(opt);
+            opt = null;
             resolve();
-        })
+        } else {    // 单个，默认首个socket
+            io.to(mqParam.room).clients((error, clients) => {
+                if (error) throw error;
+                if (clients[0]) {
+                    ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+                    SuccessConsole(opt);
+                } else {
+                    mqAdd(mqKey);
+                }
+                opt = null;
+                resolve();
+            });
+        }
     } else if (mqParam.hasOwnProperty('socketId')) {
         if (ioSocket[socketId]) {
             let opt = {
