@@ -1,3 +1,4 @@
+const {io, ioSocket} = require('../socketio');
 const {redisServer, mongoServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
@@ -157,10 +158,8 @@ const mqError = async (mess) => {
 /**
  * @description 处理mq-pending
  * @param {String} mqKey
- * @param {*} io
- * @param {*} ioSocket
  */
-const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
+const mqPendResolute = (mqKey) => new Promise(resolve => {
     let mqKeyList = mqKey.split(MQKEYJOIN);
     let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
     if (mqParam.hasOwnProperty('room')) {
@@ -169,24 +168,17 @@ const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
             pathName: __filename,
             message: mqKey
         };
-        if (Boolean(mqParam['_all'])) { // 全局
-            io.to(mqParam.room).emit(mqName, JSON.stringify(mqParam), mqKey);
-            SuccessConsole(opt);
+        io.to(mqParam.room).clients((error, clients) => {
+            if (error) throw error;
+            if (clients.length > 0) {
+                io.in(mqParam.room).emit(mqName, JSON.stringify(mqParam), mqKey);
+                SuccessConsole(opt);
+            } else {
+                mqAdd(mqKey);
+            }
             opt = null;
             resolve();
-        } else {    // 单个，默认首个socket
-            io.to(mqParam.room).clients((error, clients) => {
-                if (error) throw error;
-                if (clients[0]) {
-                    ioSocket[clients[0]].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
-                    SuccessConsole(opt);
-                } else {
-                    mqAdd(mqKey);
-                }
-                opt = null;
-                resolve();
-            });
-        }
+        });
     } else if (mqParam.hasOwnProperty('socketId')) {
         if (ioSocket[socketId]) {
             let opt = {
@@ -194,7 +186,7 @@ const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
                 pathName: __filename,
                 message: mqKey
             }
-            ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey, mqDoing);
+            ioSocket[socketId].emit(mqName, JSON.stringify(mqParam), mqKey);
             SuccessConsole(opt);
             opt = null;
         } else {
@@ -208,10 +200,8 @@ const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
 
 /**
  * @description 定时检查pending队列任务
- * @param {*} io
- * @param {*} ioSocket
  */
-const mqCheckPend = (io, ioSocket) =>{
+const mqCheckPend = () =>{
     checkPendSchedule = schedule.scheduleJob(CHECKPENDSCHEDULESPE, async () => {
         scheduleMess('CheckPend', 1);
         let loopKey = 0;
@@ -223,7 +213,7 @@ const mqCheckPend = (io, ioSocket) =>{
                 checkPend = false;
                 scheduleMess('CheckPend', 0);
             }
-            else await mqPendResolute(mqKey, io, ioSocket);
+            else await mqPendResolute(mqKey);
             loopKey += 1;
         } while (loopKey < 10);
         mess = null;
@@ -294,6 +284,7 @@ module.exports = {
     mqDoing,
     mqAck,
     mqError,
+    mqPendResolute,
     mqCheckPend,
     mqCheckDoing,
     mqStartNormalHourUpdateTask,

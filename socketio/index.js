@@ -7,6 +7,7 @@ const {
     mqError, 
     mqDoing,
     mqCheckPend, 
+    mqPendResolute,
     mqCheckDoing, 
     mqStartNormalHourUpdateTask,
     mqStartZeroPointUpdateTask
@@ -22,6 +23,7 @@ const {
     JOINCRAWLER,
     JOINCRUD,
     JOINIMAGE,
+    MQTASKDOING,
     MQTASKFINISH,
     MQTASKERROR,
     FECRAWLERCH,
@@ -51,13 +53,11 @@ io.on('connection', socket => {
         delete ioSocket[socket.id];
         console.log('bye bye!', socket.id);
     });
-    socket.on(MQTASKERROR, mqKey => {
-        mqError(mqKey);
-    });
 
-    socket.on(MQTASKFINISH, mqKey => {
-        mqAck(mqKey);
-    });
+    socket.on(MQTASKDOING, mqKey => mqDoing(mqKey));
+    socket.on(MQTASKERROR, mqKey => mqError(mqKey));
+    socket.on(MQTASKFINISH, mqKey => mqAck(mqKey));
+
     /* 加入crawler房间 */
     socket.on(JOINCRAWLER, () => {
         socket.join(ROOMCRAWLERNAME);
@@ -74,42 +74,57 @@ io.on('connection', socket => {
         console.log(`join ${ROOMIMAGE} room ${socket.id}`);
     });
 
-    /* 通过Ch去查询comic内容, 立即触发 */
+    /* 通过Chapter的id去查询comic内容, 立即触发 */
     socket.on(FECRAWLERCH, ch => {
         let param = {
             ch,
+            socket: socket.id,
             room: ROOMCRAWLERNAME
         };
         let taskName = createMQTaskName(socket.id, CWSTARTCH, param);
-        // mqAddFirst(taskName);
-        io.to(ROOMCRAWLERNAME).clients((error, clients) => {
-            if (error) throw error;
-            if (clients[0]) {
-                ioSocket[clients[0]].emit(CWSTARTCH, JSON.stringify(param), taskName, mqDoing);
-            } else {
-                mqAddFirst(taskName);
-            }
+        mqPendResolute(taskName).then(() => {
             param = taskName = null;
-        })
+        });
+    });
+
+    /* 通过Chapter的id队列去查询comic内容 */
+    socket.on(BECRAWLERCH, chList => {
+        chList.forEach(ch => {
+            let param = {
+                ch,
+                room: ROOMCRAWLERNAME
+            };
+            let taskName = createMQTaskName(MQAUTO, CWSTARTCH, param);
+            mqAdd(taskName);
+            param = taskName = null;
+        });
     });
 
     /* 完成通过Ch去查询comic内容 */
     socket.on(CWFINISHCH, (mqKey, imgList) => {
-        let mqKeyValList = mqKey.split(MQKEYJOIN);
-        let returnSocket = ioSocket[mqKeyValList[0]];
-        if (returnSocket) returnSocket.emit(FEBACKCRAWLERCH, imgList);
-        else console.log('socket连接不存在');
         mqAck(mqKey);
+        let mqKeyValList = mqKey.split(MQKEYJOIN);
+        if (mqKeyValList[0] !== MQAUTO) { // 回应 FECRAWLERCH
+            let returnSocket = ioSocket[mqKeyValList[0]];
+            if (returnSocket)
+                returnSocket.emit(FEBACKCRAWLERCH, imgList.map(url => '/getImg/' + url.replace('^', 's')));
+            else 
+                console.log('socket连接不存在');
+        } else { // 回应 BECRAWLERCH
+        
+        }
+       
         if (imgList.length > 0) {
             let param = {
                 room: ROOMCRUDNAME,
                 ch: JSON.parse(mqKeyValList[2]).ch,
-                imgList: imgList
+                imgList,
             };
             let taskName = createMQTaskName(MQAUTO, BEUPDATECHAPTER, param);
             mqAdd(taskName);
             param = taskName = null;
         }
+
         mqKeyValList = null;
     });
 
@@ -140,7 +155,6 @@ io.on('connection', socket => {
         let param = {
             room: ROOMIMAGE,
             time: new Date().valueOf(),
-            _all: true
         };
         let taskName = createMQTaskName(MQAUTO, IMGSTARTUPLOAD, param);
         mqAdd(taskName);
@@ -150,9 +164,12 @@ io.on('connection', socket => {
 /* 定时检查doing列表 */
 mqCheckDoing();
 /* 定时检查pending列表 */
-mqCheckPend(io, ioSocket);
+mqCheckPend();
 /* 定时触发查询今日更新 */
 mqStartNormalHourUpdateTask();
 mqStartZeroPointUpdateTask();
 
-module.exports = io;
+module.exports = {
+    io,
+    ioSocket
+};
