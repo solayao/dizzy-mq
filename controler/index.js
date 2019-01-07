@@ -1,4 +1,3 @@
-const {io, ioSocket} = require('../socketio');
 const {redisServer, mongoServer} = require('../dbs');
 const schedule = require('node-schedule');
 const {isNotEmpty} = require('dizzyl-util/es/type');
@@ -25,6 +24,8 @@ let checkPendSchedule = null, checkPend = true,
     normalHourSchedule = null,
     zeroPointSchedule = null;
 
+let pendingKeySet = new Set(); 
+
 /** 
  * 退出取消定时任务 && 回收变量
  */
@@ -40,7 +41,8 @@ process.on('exit', () => {
     if (normalHourSchedule) normalHourSchedule.cancel();
     if (zeroPointSchedule) zeroPointSchedule.cancel();
     scheduleMess('All', -1);
-    checkPendSchedule = checkDoingSchedule = normalHourSchedule = zeroPointSchedule =null;
+    checkPendSchedule = checkDoingSchedule = 
+    normalHourSchedule = zeroPointSchedule = pendingKeySet = null;
 });
 
 /**
@@ -70,6 +72,22 @@ const createMQTaskName = (socketid, taskName, params) => {
 }
 
 /**
+ * @description 拆分MQ的任务名称
+ * @param {*} taskName
+ * @returns {Object} {socketId, mqName, mqParam}
+ */
+const analyzeMQTaskName = (taskName) => {
+    let mqKeyList = taskName.split(MQKEYJOIN);
+    let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
+    mqKeyList = null;
+    return ({
+        socketId,
+        mqName,
+        mqParam
+    });
+}
+
+/**
  * @description 重新启动检查任务
  */
 const restartCheck = () => {
@@ -91,9 +109,17 @@ const restartCheck = () => {
 const mqAddFirst = async (mess) => {
     if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
 
+    let {mqParam} = analyzeMQTaskName(mess);
+    let redisKey = PENDINGKEY;
+    if (mqParam.hasOwnProperty('room')) {
+        redisKey += '-' + mqParam.room;
+    }
+    mqParam = null;
+    pendingKeySet.add(redisKey);
+
     await redisServer.actionForClient(client =>
-        Array.isArray(mess) ? client.LPUSHAsync(PENDINGKEY, ...mess) : 
-            client.LPUSHAsync(PENDINGKEY, mess)
+        Array.isArray(mess) ? client.LPUSHAsync(redisKey, ...mess) : 
+            client.LPUSHAsync(redisKey, mess)
     );
     restartCheck();
 }
@@ -106,9 +132,17 @@ const mqAddFirst = async (mess) => {
 const mqAdd = async (mess) => {
     if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
 
+    let {mqParam} = analyzeMQTaskName(mess);
+    let redisKey = PENDINGKEY;
+    if (mqParam.hasOwnProperty('room')) {
+        redisKey += '-' + mqParam.room;
+    }
+    mqParam = null;
+    pendingKeySet.add(redisKey);
+
     await redisServer.actionForClient(client =>
-        Array.isArray(mess) ? client.RPUSHAsync(PENDINGKEY, ...mess) : 
-            client.RPUSHAsync(PENDINGKEY, mess)
+        Array.isArray(mess) ? client.RPUSHAsync(redisKey, ...mess) : 
+            client.RPUSHAsync(redisKey, mess)
     );
     restartCheck();
 }
@@ -158,10 +192,11 @@ const mqError = async (mess) => {
 /**
  * @description 处理mq-pending
  * @param {String} mqKey
+ * @param {*} io
+ * @param {*} ioSocket
  */
-const mqPendResolute = (mqKey) => new Promise(resolve => {
-    let mqKeyList = mqKey.split(MQKEYJOIN);
-    let socketId = mqKeyList[0], mqName = mqKeyList[1], mqParam = JSON.parse(mqKeyList[2]);
+const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
+    let {socketId, mqName, mqParam} = analyzeMQTaskName(mqKey);
     if (mqParam.hasOwnProperty('room')) {
         let opt = {
             title: 'MQ Task Start',
@@ -194,26 +229,32 @@ const mqPendResolute = (mqKey) => new Promise(resolve => {
         }
         resolve();
     }
-    mqKeyList = null;
     resolve();
 })
 
 /**
  * @description 定时检查pending队列任务
  */
-const mqCheckPend = () =>{
+const mqCheckPend = (io, ioSocket) =>{
     checkPendSchedule = schedule.scheduleJob(CHECKPENDSCHEDULESPE, async () => {
         scheduleMess('CheckPend', 1);
         let loopKey = 0;
         do {
-            let mess = await redisServer.actionForClient(client => client.BLPOPAsync(PENDINGKEY, 5));
-            let mqKey = mess ? mess[1] : null;
-            if (mqKey === null) {
+            let promiseList = Array.from(pendingKeySet).map(key => 
+                redisServer.actionForClient(client => client.BLPOPAsync(key, 5))
+            );
+            let resultList = await Promise.all(promiseList);
+            let pendKeys = resultList.filter(result => !!result).map(result => result[1]);
+            promiseList = resultList = null;
+            if (pendKeys.length === 0) {
                 loopKey = 100;
                 checkPend = false;
                 scheduleMess('CheckPend', 0);
+            } else {
+                promiseList = pendKeys.map(key => mqPendResolute(key, io, ioSocket));
+                await Promise.all(promiseList);
+                promiseList = pendKeys = null;
             }
-            else await mqPendResolute(mqKey);
             loopKey += 1;
         } while (loopKey < 10);
         mess = null;

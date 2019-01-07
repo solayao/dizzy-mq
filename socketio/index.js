@@ -1,13 +1,11 @@
-const io = require('socket.io')();
 const {
     createMQTaskName,
     mqAck, 
-    mqAdd, 
-    mqAddFirst,
+    mqAdd,
     mqError, 
     mqDoing,
-    mqCheckPend, 
     mqPendResolute,
+    mqCheckPend, 
     mqCheckDoing, 
     mqStartNormalHourUpdateTask,
     mqStartZeroPointUpdateTask
@@ -36,9 +34,14 @@ const {
     BEUPDATECHAPTER,
     BECOMPARECOMIC,
     BESTARTIMGUPLOAD,
+    BECRAWLERCH,
     IMGSTARTUPLOAD
 } = require('./taskName');
+
+const io = require('socket.io')();
+exports.io = io;
 let ioSocket = {};
+exports.ioSocket = ioSocket;
 
 process.on('exit', () => {
     ioSocket = null;
@@ -161,15 +164,11 @@ io.on('connection', socket => {
         param = taskName = null;
     });
 });
+
 /* 定时检查doing列表 */
 mqCheckDoing();
 /* 定时检查pending列表 */
-mqCheckPend();
+mqCheckPend(io, ioSocket);
 /* 定时触发查询今日更新 */
 mqStartNormalHourUpdateTask();
 mqStartZeroPointUpdateTask();
-
-module.exports = {
-    io,
-    ioSocket
-};

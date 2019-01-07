@@ -11,7 +11,8 @@
         "js": "node --harmony"
     },
     "watch": [
-        "www.js",
+        "bin/www.js",
+        "app.js",
         "socketio/*",
         "controler/*"
     ],

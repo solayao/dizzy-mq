@@ -5,8 +5,9 @@
  */
 require("@babel/polyfill");
 require("@babel/register");
+var app = require('../app');
 var http = require('http');
-var io = require('../socketio');
+var {io} = require('../socketio');
 
 /**
  * Get port from environment and store in Express.
@@ -16,7 +17,7 @@ var port = normalizePort(process.env.PORT || '4627');
 /**
  * Create HTTP server.
  */
-var server = http.createServer();
+var server = http.createServer(app.callback());
 io.listen(server);
 
 /**
