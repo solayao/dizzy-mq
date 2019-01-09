@@ -1,8 +1,7 @@
 {
     "redisConfig": {
         "host": "127.0.0.1",
-        "port": 6379,
-        "password": "LCB.20131011.wq"
+        "port": 6379
     },
     "mongoConfig": {
         "host": "127.0.0.1",
