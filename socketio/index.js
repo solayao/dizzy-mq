@@ -7,8 +7,8 @@ const {
     mqPendResolute,
     mqCheckPend, 
     mqCheckDoing, 
-    mqStartNormalHourUpdateTask,
-    mqStartZeroPointUpdateTask
+    mqStartTodayCheckUpdateTask,
+    mqStartTodayLastCheckUpdateTask
 } = require('../controler');
 const {
     MQAUTO,
@@ -170,5 +170,5 @@ mqCheckDoing();
 /* 定时检查pending列表 */
 mqCheckPend(io, ioSocket);
 /* 定时触发查询今日更新 */
-mqStartNormalHourUpdateTask();
-mqStartZeroPointUpdateTask();
+mqStartTodayCheckUpdateTask();
+mqStartTodayLastCheckUpdateTask();

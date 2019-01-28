@@ -14,8 +14,8 @@ const CWSTARTCH = 'crawler-start-c-by-ch';
 const CWSTARTID = 'crawler-start-c-by-id';
 const CWFINISHCH = 'crawler-finish-c-by-ch';
 const CWCOMPARECOMIC = 'crawler-compare-comic';
-const CWNORMALHOURUPDATE = 'crawler-normal-hour-update';
-const CWZEROPOINTUPDATE = 'crawler-zero-point-update';
+const CWTODAYUPDATE = 'crawler-today-update';
+const CWYESTERDAYUPDATE = 'crawler-today-last-update';
 
 const BEUPDATECHAPTER = 'crud-update-chapter';
 const BECOMPARECOMIC = 'crud-compare-comic';
@@ -40,8 +40,8 @@ module.exports = {
     CWSTARTID,
     CWFINISHCH,
     CWCOMPARECOMIC,
-    CWNORMALHOURUPDATE,
-    CWZEROPOINTUPDATE,
+    CWTODAYUPDATE,
+    CWYESTERDAYUPDATE,
 
     BEUPDATECHAPTER,
     BECOMPARECOMIC,

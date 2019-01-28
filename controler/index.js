@@ -10,12 +10,12 @@ const {
     MQAUTO, 
     CHECKPENDSCHEDULESPE, 
     CHECKDOINGSCHEDULESPE, 
-    HOURGETUPDATESCHEDULESPE, 
-    ZEROPOINTSCHEDULESPE
+    TODAYCHECKCHEDULESPE, 
+    TODAYLASTCHECKSCHEDULESPE
 } = require( './const');
 const {
-    CWNORMALHOURUPDATE, 
-    CWZEROPOINTUPDATE,
+    CWTODAYUPDATE, 
+    CWYESTERDAYUPDATE,
 } = require( '../socketio/taskName');
 const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
@@ -107,21 +107,7 @@ const restartCheck = () => {
  * paramObj = {room?, socketId?, ...}
  */
 const mqAddFirst = async (mess) => {
-    if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
-
-    let {mqParam} = analyzeMQTaskName(mess);
-    let redisKey = PENDINGKEY;
-    if (mqParam.hasOwnProperty('room')) {
-        redisKey += '-' + mqParam.room;
-    }
-    mqParam = null;
-    pendingKeySet.add(redisKey);
-
-    await redisServer.actionForClient(client =>
-        Array.isArray(mess) ? client.LPUSHAsync(redisKey, ...mess) : 
-            client.LPUSHAsync(redisKey, mess)
-    );
-    restartCheck();
+    await mqAdd(mess, 'LPUSHAsync');
 }
 
 /**
@@ -129,7 +115,7 @@ const mqAddFirst = async (mess) => {
  * @param {String|Array} mess socket.id||taskName||JSON.stringify(paramObj)
  * paramObj = {room?, socketId?, ...}
  */
-const mqAdd = async (mess) => {
+const mqAdd = async (mess, redisFunc = 'RPUSHAsync') => {
     if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
 
     let {mqParam} = analyzeMQTaskName(mess);
@@ -141,8 +127,8 @@ const mqAdd = async (mess) => {
     pendingKeySet.add(redisKey);
 
     await redisServer.actionForClient(client =>
-        Array.isArray(mess) ? client.RPUSHAsync(redisKey, ...mess) : 
-            client.RPUSHAsync(redisKey, mess)
+        Array.isArray(mess) ? client[redisFunc](redisKey, ...mess) : 
+            client[redisFunc](redisKey, mess)
     );
     restartCheck();
 }
@@ -290,31 +276,34 @@ const mqCheckDoing = () => {
 }
 
 /**
- * @description 定时触发添加获取今日更新任务
+ * @description 定时触发添加获取今日更新任务, 每小时30分执行
  */
-const mqStartNormalHourUpdateTask = () => {
-    normalHourSchedule = schedule.scheduleJob(HOURGETUPDATESCHEDULESPE, () => {
-        scheduleMess('NormalHourUpdateTask', 1);        
+const mqStartTodayCheckUpdateTask = () => {
+    normalHourSchedule = schedule.scheduleJob(TODAYCHECKCHEDULESPE, () => {
+        scheduleMess('TodayCheckUpdateTask', 1);        
         let param = {
             room: ROOMCRAWLERNAME
         }
-        let taskName = createMQTaskName(MQAUTO, CWNORMALHOURUPDATE, param);
-        mqAdd(taskName);
+        let taskName = createMQTaskName(MQAUTO, CWTODAYUPDATE, param);
+        mqAddFirst(taskName);
         param = taskName = null;
-        scheduleMess('NormalHourUpdateTask', -1);
+        scheduleMess('TodayCheckUpdateTask', -1);
     }); 
 };
 
-const mqStartZeroPointUpdateTask = () => {
-    zeroPointSchedule = schedule.scheduleJob(ZEROPOINTSCHEDULESPE, () => {
-        scheduleMess('ZeroPointUpdateTask', 1);        
+/**
+ * @description 定时触发添加获取最后今日的更新任务, 每天23：58：30执行
+ */
+const mqStartTodayLastCheckUpdateTask = () => {
+    zeroPointSchedule = schedule.scheduleJob(TODAYLASTCHECKSCHEDULESPE, () => {
+        scheduleMess('TodayLastCheckUpdateTask', 1);        
         let param = {
             room: ROOMCRAWLERNAME
         }
-        let taskName = createMQTaskName(MQAUTO, CWZEROPOINTUPDATE, param);
-        mqAdd(taskName);
+        let taskName = createMQTaskName(MQAUTO, CWYESTERDAYUPDATE, param);
+        mqAddFirst(taskName);
         param = taskName = null;
-        scheduleMess('ZeroPointUpdateTask', -1);
+        scheduleMess('TodayLastCheckUpdateTask', -1);
     });
 }
 
@@ -328,30 +317,6 @@ module.exports = {
     mqPendResolute,
     mqCheckPend,
     mqCheckDoing,
-    mqStartNormalHourUpdateTask,
-    mqStartZeroPointUpdateTask
+    mqStartTodayCheckUpdateTask,
+    mqStartTodayLastCheckUpdateTask
 }
-
-// (() => {
-//     const {createMQTaskName, mqAdd} = require('./')
-//     const {MQAUTO, ROOMCRAWLERNAME} = require('../controler/const');
-//     const {CWNORMALHOURUPDATE} = require('../socketio/taskName')
-//     let param = {
-//         room: ROOMCRAWLERNAME
-//     }
-//     let taskName = createMQTaskName(MQAUTO, CWNORMALHOURUPDATE, param);
-//     mqAdd(taskName);
-//     param = taskName = null;
-// })()
-
-// mongoServer.actionForClient(client => 
-//     client.db('dmgou').collection('comic').find().toArray()
-// ).then(list => redisServer.lPush(PENDINGKEY, list.map(obj => {
-//     let r = createMQTaskName(MQAUTO, 'crawler-dmzj-by-name-update', {
-//         name: obj.n,
-//         author: obj.a,
-//         _id: obj._id,
-//         room: ROOMCRAWLERNAME
-//     });
-//     return r;
-// })))
