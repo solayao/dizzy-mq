@@ -8,7 +8,8 @@ const {
     mqCheckPend, 
     mqCheckDoing, 
     mqStartTodayCheckUpdateTask,
-    mqStartTodayLastCheckUpdateTask
+    mqStartTodayLastCheckUpdateTask,
+    socketAddRoom
 } = require('../controler');
 const {
     MQAUTO,
@@ -64,16 +65,19 @@ io.on('connection', socket => {
     /* 加入crawler房间 */
     socket.on(JOINCRAWLER, () => {
         socket.join(ROOMCRAWLERNAME);
+        socketAddRoom(ROOMCRAWLERNAME);
         console.log(`join ${ROOMCRAWLERNAME} room ${socket.id}`);
     });
     /* 加入crud房间 */
     socket.on(JOINCRUD, () => {
         socket.join(ROOMCRUDNAME);
+        socketAddRoom(ROOMCRUDNAME);
         console.log(`join ${ROOMCRUDNAME} room ${socket.id}`);
     });
     /* 加入Image房间 */
     socket.on(JOINIMAGE, () => {
         socket.join(ROOMIMAGE);
+        socketAddRoom(ROOMIMAGE);
         console.log(`join ${ROOMIMAGE} room ${socket.id}`);
     });
 

@@ -16,6 +16,7 @@ const {
 const {
     CWTODAYUPDATE, 
     CWYESTERDAYUPDATE,
+    CWSTARTID
 } = require( '../socketio/taskName');
 const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
@@ -70,6 +71,7 @@ const scheduleMess = (type, status) => {
 const createMQTaskName = (socketid, taskName, params) => {
     return socketid+MQKEYJOIN+taskName+MQKEYJOIN+JSON.stringify(params);
 }
+exports.createMQTaskName = createMQTaskName;
 
 /**
  * @description 拆分MQ的任务名称
@@ -102,6 +104,14 @@ const restartCheck = () => {
 }
 
 /**
+ * @description 加入房间
+ */
+const socketAddRoom = (room) => {
+    pendingKeySet.add(PENDINGKEY + '-' + room);
+}
+exports.socketAddRoom = socketAddRoom;
+
+/**
  * @description 添加优先任务
  * @param {String|Array} mess socket.id||taskName||JSON.stringify(paramObj)
  * paramObj = {room?, socketId?, ...}
@@ -109,6 +119,7 @@ const restartCheck = () => {
 const mqAddFirst = async (mess) => {
     await mqAdd(mess, 'LPUSHAsync');
 }
+exports.mqAddFirst = mqAddFirst;
 
 /**
  * @description 添加任务
@@ -124,7 +135,6 @@ const mqAdd = async (mess, redisFunc = 'RPUSHAsync') => {
         redisKey += '-' + mqParam.room;
     }
     mqParam = null;
-    pendingKeySet.add(redisKey);
 
     await redisServer.actionForClient(client =>
         Array.isArray(mess) ? client[redisFunc](redisKey, ...mess) : 
@@ -132,6 +142,7 @@ const mqAdd = async (mess, redisFunc = 'RPUSHAsync') => {
     );
     restartCheck();
 }
+exports.mqAdd = mqAdd;
 
 /**
  * @description 处理正在处理的任务
@@ -148,6 +159,7 @@ const mqDoing = async (mess) => {
     }
     return;
 }
+exports.mqDoing = mqDoing;
 
 /**
  * @description 处理完成的任务
@@ -161,6 +173,7 @@ const mqAck = async (mess) => {
             client.HDELAsync(DOINGKEY, mess)
     );
 }
+exports.mqAck = mqAck;
 
 /**
  * @description 处理失败的任务
@@ -174,6 +187,7 @@ const mqError = async (mess) => {
             client.RPUSHAsync(ERRORKEY, mess)
     );
 }
+exports.mqError = mqError;
 
 /**
  * @description 处理mq-pending
@@ -247,6 +261,7 @@ const mqCheckPend = (io, ioSocket) =>{
         scheduleMess('CheckPend', -1);
     });
 }
+exports.mqCheckPend = mqCheckPend;
 
 /**
  * @description 定时检查doing队列任务
@@ -274,6 +289,7 @@ const mqCheckDoing = () => {
         scheduleMess('CheckDoing', -1);
     });   
 }
+exports.mqCheckDoing = mqCheckDoing;
 
 /**
  * @description 定时触发添加获取今日更新任务, 每小时30分执行
@@ -290,6 +306,7 @@ const mqStartTodayCheckUpdateTask = () => {
         scheduleMess('TodayCheckUpdateTask', -1);
     }); 
 };
+exports.mqStartTodayCheckUpdateTask = mqStartTodayCheckUpdateTask;
 
 /**
  * @description 定时触发添加获取最后今日的更新任务, 每天23：58：30执行
@@ -306,17 +323,26 @@ const mqStartTodayLastCheckUpdateTask = () => {
         scheduleMess('TodayLastCheckUpdateTask', -1);
     });
 }
+exports.mqStartTodayLastCheckUpdateTask = mqStartTodayLastCheckUpdateTask;
 
-module.exports = {
-    createMQTaskName,
-    mqAdd,
-    mqAddFirst,
-    mqDoing,
-    mqAck,
-    mqError,
-    mqPendResolute,
-    mqCheckPend,
-    mqCheckDoing,
-    mqStartTodayCheckUpdateTask,
-    mqStartTodayLastCheckUpdateTask
-}
+
+// 添加获取所有漫画详情， 用于初始化
+// mongoServer.actionForClient(client => 
+//         client.db('dmgou').collection('comic')
+//             .find()
+//             .project({
+//                 '_id': 1,
+//             })
+//             .toArray()
+//     ).then(data => {
+//         data.forEach(o => {
+//             let taskName = createMQTaskName(MQAUTO, CWSTARTID, {
+//                 comicId: o._id,
+//                 room: ROOMCRAWLERNAME
+//             })
+//             mqAdd(taskName);
+//             taskName = null;
+//         })
+//     }).then(() => {
+//         console.log('end')
+//     })
