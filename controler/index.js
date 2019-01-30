@@ -16,7 +16,6 @@ const {
 const {
     CWTODAYUPDATE, 
     CWYESTERDAYUPDATE,
-    CWSTARTID
 } = require( '../socketio/taskName');
 const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
@@ -129,17 +128,29 @@ exports.mqAddFirst = mqAddFirst;
 const mqAdd = async (mess, redisFunc = 'RPUSHAsync') => {
     if (Array.isArray(mess) && !isNotEmpty(mess)) return ;
 
-    let {mqParam} = analyzeMQTaskName(mess);
-    let redisKey = PENDINGKEY;
-    if (mqParam.hasOwnProperty('room')) {
-        redisKey += '-' + mqParam.room;
-    }
-    mqParam = null;
+    if (!Array.isArray(mess)) mess = [mess];
 
-    await redisServer.actionForClient(client =>
-        Array.isArray(mess) ? client[redisFunc](redisKey, ...mess) : 
-            client[redisFunc](redisKey, mess)
-    );
+    let messObj = mess.reduce((total, current) => {
+        let {mqParam} = analyzeMQTaskName(current);
+
+        let redisKey = PENDINGKEY;
+
+        if (mqParam.hasOwnProperty('room')) redisKey += '-' + mqParam.room;
+
+        mqParam = null;
+
+        if (!total[redisKey]) total[redisKey] = [current];
+        else total[redisKey].push(current);
+
+        return total;
+    }, {});
+
+    await Promise.all(Object.keys(messObj).map(redisKey => redisServer.actionForClient(client =>
+        client[redisFunc](redisKey, ...messObj[redisKey]) 
+    )));
+
+    messObj = null;
+    
     restartCheck();
 }
 exports.mqAdd = mqAdd;
@@ -186,6 +197,8 @@ const mqError = async (mess) => {
         Array.isArray(mess) ? client.RPUSHAsync(ERRORKEY, ...mess) : 
             client.RPUSHAsync(ERRORKEY, mess)
     );
+
+    await mqAck(mess);
 }
 exports.mqError = mqError;
 
@@ -327,6 +340,7 @@ exports.mqStartTodayLastCheckUpdateTask = mqStartTodayLastCheckUpdateTask;
 
 
 // 添加获取所有漫画详情， 用于初始化
+// const {CWSTARTID} = require( '../socketio/taskName');
 // mongoServer.actionForClient(client => 
 //         client.db('dmgou').collection('comic')
 //             .find()

@@ -81,7 +81,7 @@ io.on('connection', socket => {
         console.log(`join ${ROOMIMAGE} room ${socket.id}`);
     });
 
-    /* 通过Chapter的id去查询comic内容, 立即触发 */
+    /* 通过Chapter的id去查询Chapter的图片列表, 立即触发 */
     socket.on(FECRAWLERCH, ch => {
         let param = {
             ch,
@@ -94,7 +94,7 @@ io.on('connection', socket => {
         });
     });
 
-    /* 通过Chapter的id队列去查询comic内容 */
+    /* 通过Chapter的id队列去查询Chapter的图片列表 */
     socket.on(BECRAWLERCH, chList => {
         chList.forEach(ch => {
             let param = {
@@ -107,7 +107,7 @@ io.on('connection', socket => {
         });
     });
 
-    /* 完成通过Ch去查询comic内容 */
+    /* 完成通过Ch去查询Chapter的图片列表 */
     socket.on(CWFINISHCH, (mqKey, imgList) => {
         mqAck(mqKey);
         let mqKeyValList = mqKey.split(MQKEYJOIN);
