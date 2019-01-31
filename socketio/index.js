@@ -91,6 +91,8 @@ io.on('connection', socket => {
         let taskName = createMQTaskName(socket.id, CWSTARTCH, param);
         mqPendResolute(taskName).then(() => {
             param = taskName = null;
+        }).catch(err => {   // 没有对应的crawler
+            ioSocket[socket.id].emit(FEBACKCRAWLERCH, []);
         });
     });
 
