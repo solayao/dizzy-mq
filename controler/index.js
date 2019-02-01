@@ -244,6 +244,7 @@ const mqPendResolute = (mqKey, io, ioSocket) => new Promise(resolve => {
     }
     resolve();
 })
+exports.mqPendResolute = mqPendResolute;
 
 /**
  * @description 定时检查pending队列任务
@@ -343,20 +344,29 @@ exports.mqStartTodayLastCheckUpdateTask = mqStartTodayLastCheckUpdateTask;
 // const {CWSTARTID} = require( '../socketio/taskName');
 // mongoServer.actionForClient(client => 
 //         client.db('dmgou').collection('comic')
-//             .find()
+//             .find({
+//                 d: null
+//             })
 //             .project({
 //                 '_id': 1,
 //             })
 //             .toArray()
 //     ).then(data => {
-//         data.forEach(o => {
-//             let taskName = createMQTaskName(MQAUTO, CWSTARTID, {
-//                 comicId: o._id,
-//                 room: ROOMCRAWLERNAME
-//             })
-//             mqAdd(taskName);
-//             taskName = null;
+//         // data.forEach(o => {
+//         //     let taskName = createMQTaskName(MQAUTO, CWSTARTID, {
+//         //         comicId: o._id,
+//         //         room: ROOMCRAWLERNAME
+//         //     })
+//         //     mqAdd(taskName);
+//         //     taskName = null;
+//         // })
+//         let o = data[0];
+//         let taskName = createMQTaskName(MQAUTO, CWSTARTID, {
+//             comicId: o._id,
+//             room: ROOMCRAWLERNAME
 //         })
+//         mqAdd(taskName);
+//         taskName = null;
 //     }).then(() => {
 //         console.log('end')
 //     })

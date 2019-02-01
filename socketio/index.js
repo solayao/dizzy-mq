@@ -38,24 +38,32 @@ const {
     BECRAWLERCH,
     IMGSTARTUPLOAD
 } = require('./taskName');
+const {SuccessConsole} = require('dizzyl-util/es/log/ChalkConsole');
 
 const io = require('socket.io')();
 exports.io = io;
 let ioSocket = {};
 exports.ioSocket = ioSocket;
+let opt = {
+    title: 'MQ Task Message',
+    pathName: __filename,
+    message: ''
+};
 
 process.on('exit', () => {
-    ioSocket = null;
+    ioSocket = opt = null;
 });
 
 io.on('connection', socket => {
-    /* socket.io client连接成功 */    
-    console.log('welcome to dizzyl-MQ', socket.id);
+    /* socket.io client连接成功 */   
+    opt.message = 'welcome to dizzyl-MQ, ' + socket.id;
+    SuccessConsole(opt);
     ioSocket[socket.id] = socket;
     /* socket.io client连接关闭 */
     socket.on('disconnect', function () {
         delete ioSocket[socket.id];
-        console.log('bye bye!', socket.id);
+        opt.message = 'bye bye! ' + socket.id;
+        SuccessConsole(opt);
     });
 
     socket.on(MQTASKDOING, mqKey => mqDoing(mqKey));
@@ -66,32 +74,36 @@ io.on('connection', socket => {
     socket.on(JOINCRAWLER, () => {
         socket.join(ROOMCRAWLERNAME);
         socketAddRoom(ROOMCRAWLERNAME);
-        console.log(`join ${ROOMCRAWLERNAME} room ${socket.id}`);
+        opt.message = `join ${ROOMCRAWLERNAME} room ${socket.id}`;
+        SuccessConsole(opt);
     });
     /* 加入crud房间 */
     socket.on(JOINCRUD, () => {
         socket.join(ROOMCRUDNAME);
         socketAddRoom(ROOMCRUDNAME);
-        console.log(`join ${ROOMCRUDNAME} room ${socket.id}`);
+        opt.message = `join ${ROOMCRUDNAME} room ${socket.id}`;
+        SuccessConsole(opt);
     });
     /* 加入Image房间 */
     socket.on(JOINIMAGE, () => {
         socket.join(ROOMIMAGE);
         socketAddRoom(ROOMIMAGE);
-        console.log(`join ${ROOMIMAGE} room ${socket.id}`);
+        opt.message = `join ${ROOMIMAGE} room ${socket.id}`;
+        SuccessConsole(opt);
     });
 
     /* 通过Chapter的id去查询Chapter的图片列表, 立即触发 */
-    socket.on(FECRAWLERCH, ch => {
+    socket.on(FECRAWLERCH, async ch => {
         let param = {
             ch,
             socket: socket.id,
             room: ROOMCRAWLERNAME
         };
         let taskName = createMQTaskName(socket.id, CWSTARTCH, param);
-        mqPendResolute(taskName).then(() => {
+        await mqPendResolute(taskName, io, ioSocket).then(() => {
             param = taskName = null;
         }).catch(err => {   // 没有对应的crawler
+            console.error(err)
             ioSocket[socket.id].emit(FEBACKCRAWLERCH, []);
         });
     });
