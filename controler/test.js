@@ -5,6 +5,7 @@ const {
     DOINGKEY, 
     ERRORKEY, 
     MQKEYJOIN, 
+    ROOMCRUDNAME,
     ROOMCRAWLERNAME, 
     MQAUTO, 
     CHECKPENDSCHEDULESPE, 
@@ -12,6 +13,20 @@ const {
     TODAYCHECKCHEDULESPE, 
     TODAYLASTCHECKSCHEDULESPE
 } = require( './const');
+
+// const {BECOMPARECOMIC} = require( '../socketio/taskName');
+// redisServer.lRange('lateComic').then(data => {
+//         data.forEach(o => {
+//             let taskName = createMQTaskName(MQAUTO, BECOMPARECOMIC, {
+//                 detail: JSON.parse(o),
+//                 room: ROOMCRUDNAME
+//             })
+//             mqAdd(taskName);
+//             taskName = null;
+//         })
+//     }).then(() => {
+//         console.log('end')
+//     })
 
 // const {CWSTARTID} = require( '../socketio/taskName');
 // redisServer.lRange('recrawlerId').then(data => {
