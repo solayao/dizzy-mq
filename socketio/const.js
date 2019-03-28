@@ -1,0 +1,28 @@
+const PENDINGKEY = 'mq-pending';
+const DOINGKEY = 'mq-doing';
+const ERRORKEY = 'mq-error';
+const MQKEYJOIN = '||';
+const ROOMCRAWLERNAME = 'crawler';
+const ROOMCRUDNAME = 'crud';
+const ROOMIMAGE = 'image';
+const MQAUTO = 'MQAUTO';
+
+const CHECKPENDSCHEDULESPE = '*/10 * * * * *';
+const CHECKDOINGSCHEDULESPE = '0 * * * * *';
+const TODAYCHECKCHEDULESPE = '0 30 * * * *';
+const TODAYLASTCHECKSCHEDULESPE = '30 58 23 * * *';
+
+module.exports = {
+    PENDINGKEY,
+    DOINGKEY,
+    ERRORKEY,
+    MQKEYJOIN,
+    ROOMCRAWLERNAME,
+    ROOMCRUDNAME,
+    ROOMIMAGE,
+    MQAUTO,
+    CHECKPENDSCHEDULESPE,
+    CHECKDOINGSCHEDULESPE,
+    TODAYCHECKCHEDULESPE,
+    TODAYLASTCHECKSCHEDULESPE,
+}
