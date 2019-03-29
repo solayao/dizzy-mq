@@ -1,9 +1,11 @@
 const shortid = require('shortid');
-const { getPrototypeType } = require('dizzyl-util/es/type');
+const { getPrototypeType, isNotEmpty } = require('dizzyl-util/es/type');
 const { redisServer } = require('./index');
 
 const redisKeyForRoomList = 'MQ-ROOM-LIST';
 const redisKeyForRoomTaskBefore = 'MQ-TASK-';
+const redisKeyDoing = 'MQ-DOING';
+const redisKeyError = 'MQ-ERROR';
 
 /**
  * @description 通过params设置MQ Task到redis
@@ -96,8 +98,78 @@ exports.getHashByKey = getHashByKey;
 
 /**
  * @description 设置doing的redisKey
- * @param {Object} hash
+ * @param {Object} hash { [redisKey]: timestamp }
+ * @returns {Promise}
  */
-const setHash2Doing = (hash) =>
-    redisServer.hmSet('', hash)
+const setHash2Doing = (hash) => {
+    if (getPrototypeType(hash) === 'Object' && isNotEmpty(hash))
+        return redisServer.hmSet(redisKeyDoing, hash);
+    else 
+        return Promise.resolve()
+}
 exports.setHash2Doing = setHash2Doing;
+
+
+/**
+ * @description 删除doing的redisKey
+ * @param {Array} hashKeyList [redisKey]
+ * @returns {Promise}
+ */
+const delHashKey2Doing = (hashKeyList) => {
+    if (getPrototypeType(hashKeyList) === 'Array' && hashKeyList.length)
+        return redisServer.actionForClient(client => client.HDELAsync(redisKeyDoing, ...hashKeyList));
+    else 
+        return Promise.resolve(); 
+}
+exports.delHashKey2Doing = delHashKey2Doing;
+
+
+/**
+ * @description 删除redis中的keyList
+ * @param {Array} redisKeyList
+ * @returns {Promise}
+ */
+const delRedisKey = (redisKeyList) => {
+    if (getPrototypeType(redisKeyList) === 'Array' && redisKeyList.length)
+        return redisServer.actionForClient(client => client.DELAsync(...redisKeyList));
+    else 
+        return Promise.resolve();
+}
+exports.delRedisKey = delRedisKey;
+
+
+/**
+ * @description 添加error
+ * @param {Array} scorenValList [socren, val, ....]
+ * @returns {Promise}
+ */
+const addSortedSet2Error = (scorenValList) => {
+    if (getPrototypeType(scorenValList) === 'Array' && scorenValList.length) 
+        return redisServer.actionForClient(client => client.ZADDAsync([redisKeyError, ...scorenValList]));
+    else 
+        return Promise.resolve();
+}
+exports.addSortedSet2Error = addSortedSet2Error;
+
+
+/**
+ * @description 获取doing的所有值
+ * @returns {Promise}
+ */
+const getHashDoing = () => 
+    getHashByKey(redisKeyDoing)
+exports.getHashDoing = getHashDoing;
+
+/**
+ * @description 更新MQ Tash Hash对象的属性
+ * @param {*} redisKey
+ * @param {*} updateParam
+ * @returns {Promise}
+ */
+const updateMQTask = (redisKey, updateParam) => {
+    if (!redisKey && getPrototypeType(updateParam) === 'Object' && isNotEmpty(updateParam))
+        return redisServer.hmSet(redisKey, updateParam);
+    else 
+        return Promise.resolve();
+}
+exports.updateMQTask = updateMQTask;

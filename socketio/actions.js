@@ -1,7 +1,10 @@
 const { SuccessConsole } = require('dizzyl-util/es/log/ChalkConsole');
 const { isNotEmpty } = require('dizzyl-util/es/type');
-const { setMQTask, addMQTaskToRoom, getMQRoomList, getRoomTask, getHashByKey, setHash2Doing } = require('../dbs/actions');
 const { ROOMCRAWLERNAME, ROOMCRUDNAME, ROOMIMAGE } = require('./const');
+const { setMQTask, setHash2Doing, updateMQTask,
+        addMQTaskToRoom, addSortedSet2Error,
+        getMQRoomList, getRoomTask, getHashByKey, getHashDoing,
+        delRedisKey, delHashKey2Doing } = require('../dbs/actions');
 
 let opt = {
     title: 'MQ Task Message',
@@ -126,18 +129,18 @@ exports.handleGetTask = handleGetTask;
  * @param {*} io
  * @param {*} param task的param { room, socketId, taskName, ...otherParams }
  */
-const handleResolveTaskParam = (io, param) => {
+const handleResolveTaskParam = async (io, param) => {
     let { room, socketId, taskName, ...otherParams } = param;
 
     if (!!room) { // 房间广播
-        io.to(room).clients((error, clients) => {
+        io.to(room).clients(async (error, clients) => {
             if (error) throw error;
 
             if (clients.length > 0) {
                 io.in(room).emit(taskName, otherParams);
             } else {
                 if (!!otherParams.redisKey)
-                    addMQTaskToRoom(room, otherParams.redisKey);
+                    await addMQTaskToRoom(room, otherParams.redisKey);
             }
         });
     }
@@ -147,7 +150,15 @@ const handleResolveTaskParam = (io, param) => {
             socketMapper[socketId].emit(taskName, otherParams);
         } else {
             if (!!otherParams.redisKey)
-                addMQTaskToRoom(room, otherParams.redisKey);
+                await addMQTaskToRoom(room, otherParams.redisKey);
+        }
+    }
+
+    if (!room && !socketId) { // 传参错误
+        if (!!otherParams.redisKey) {
+            await updateMQTask(otherParams.redisKey, {errMsg: '传参错误, 缺少room / socketId'});
+
+            await handleError(otherParams.redisKey);
         }
     }
 
@@ -170,3 +181,80 @@ const handleAddDoing = async (redisKey) => {
     setParam = null;
 }
 exports.handleAddDoing = handleAddDoing;
+
+/**
+ * @description 处理删除redisKey从doing hash
+ * @param {*} redisKey (String, Array)
+ */
+const handleFinish = async (redisKey) => {
+    let delKeyList = Array.isArray(redisKey) ? redisKey : [redisKey];
+
+    await delHashKey2Doing(delKeyList);
+
+    delKeyList = null;
+}
+exports.handleFinish = handleFinish;
+
+
+/**
+ * @description 处理删除redisKey
+ * @param {*} redisKey (String, Array)
+ */
+const handleDelete = async (redisKey) => {
+    let keyList = Array.isArray(redisKey) ? redisKey : [redisKey];
+
+    await delRedisKey(keyList);
+
+    keyList = null;
+}
+exports.handleDelete = handleDelete;
+
+
+/**
+ * @description 处理添加redis Error & 删除redisKey
+ * @param {*} redisKey (String, Array)
+ */
+const handleError = async (redisKey) => {
+    let scorenValList = [], 
+        scoren = new Date().valueOf(),
+        keyList = Array.isArray(redisKey) ? redisKey : [redisKey];
+
+    let valList = await Promise.all(keyList.map(key => getHashByKey(key)))
+                                .then(obj => JSON.stringify(obj))
+                                .catch(err => []);
+
+    valList.forEach(val => {
+        scorenValList.push(scoren, val);
+    });
+
+    await addSortedSet2Error(scorenValList);
+
+    await delRedisKey(keyList);
+
+    scorenValList = scoren = keyList = valList = null;
+}
+exports.handleError = handleError;
+
+/**
+ * @description 处理检查doing hash, 超时的在diong Hash删除并添加到error Set
+ * @param {number} [overtimeMin=10] 超时(Min)
+ */
+const handleCheckDoing = async (overtimeMin = 10) => {
+    let doingObj = await getHashDoing();
+
+    let overtimeKeyList = [], currentTimestamp = new Date().valueOf();
+
+    for (let redisKey in doingObj) {
+        let timestamp = doingObj[redisKey];
+
+        if ((currentTimestamp - timestamp) > overtimeMin * 60 * 1000) 
+            overtimeKeyList.push(redisKey);
+    }
+
+    await delHashKey2Doing(overtimeKeyList);
+
+    await handleError(overtimeKeyList);
+
+    doingObj = overtimeKeyList = null;
+}
+exports.handleCheckDoing = handleCheckDoing;
