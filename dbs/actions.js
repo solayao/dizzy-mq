@@ -2,10 +2,10 @@ const shortid = require('shortid');
 const { getPrototypeType, isNotEmpty } = require('dizzyl-util/es/type');
 const { redisServer } = require('./index');
 
-const redisKeyForRoomList = 'MQ-ROOM-LIST';
-const redisKeyForRoomTaskBefore = 'MQ-TASK-';
-const redisKeyDoing = 'MQ-DOING';
-const redisKeyError = 'MQ-ERROR';
+const REDIS_KEY_FOR_ROOMLIST = 'MQ-ROOM-LIST';
+const REDIS_KEY_FOR_ROOMTASK_BEFORE = 'MQ-TASK-';
+const REDIS_KEY_DOING = 'MQ-DOING';
+const REDIS_KEY_ERROR = 'MQ-ERROR';
 
 /**
  * @description 通过params设置MQ Task到redis
@@ -20,7 +20,7 @@ const setMQTask = async (params) => {
 
     let redisRoomKey = await addMQTaskToRoom(room, redisKey);
 
-    await redisServer.actionForClient(client => client.SADDAsync(redisKeyForRoomList, redisRoomKey));
+    await redisServer.actionForClient(client => client.SADDAsync(REDIS_KEY_FOR_ROOMLIST, redisRoomKey));
 
     return redisKey;
 }
@@ -44,7 +44,7 @@ const addMQTaskToRoom = async (room, redisKey) => {
         default: {}
     }
 
-    let redisRoomKey = redisKeyForRoomTaskBefore + room.toUpperCase();
+    let redisRoomKey = REDIS_KEY_FOR_ROOMTASK_BEFORE + room.toUpperCase();
 
     if (keyList.length)
         await redisServer.actionForClient(client => client.RPUSHAsync(redisRoomKey, ...keyList))
@@ -61,7 +61,7 @@ exports.addMQTaskToRoom = addMQTaskToRoom;
  * @returns {Array}
  */
 const getMQRoomList = () => 
-    redisServer.actionForClient(client => client.SMEMBERSAsync(redisKeyForRoomList))
+    redisServer.actionForClient(client => client.SMEMBERSAsync(REDIS_KEY_FOR_ROOMLIST))
 exports.getMQRoomList = getMQRoomList;
 
 
@@ -103,7 +103,7 @@ exports.getHashByKey = getHashByKey;
  */
 const setHash2Doing = (hash) => {
     if (getPrototypeType(hash) === 'Object' && isNotEmpty(hash))
-        return redisServer.hmSet(redisKeyDoing, hash);
+        return redisServer.hmSet(REDIS_KEY_DOING, hash);
     else 
         return Promise.resolve()
 }
@@ -117,7 +117,7 @@ exports.setHash2Doing = setHash2Doing;
  */
 const delHashKey2Doing = (hashKeyList) => {
     if (getPrototypeType(hashKeyList) === 'Array' && hashKeyList.length)
-        return redisServer.actionForClient(client => client.HDELAsync(redisKeyDoing, ...hashKeyList));
+        return redisServer.actionForClient(client => client.HDELAsync(REDIS_KEY_DOING, ...hashKeyList));
     else 
         return Promise.resolve(); 
 }
@@ -145,7 +145,7 @@ exports.delRedisKey = delRedisKey;
  */
 const addSortedSet2Error = (scorenValList) => {
     if (getPrototypeType(scorenValList) === 'Array' && scorenValList.length) 
-        return redisServer.actionForClient(client => client.ZADDAsync([redisKeyError, ...scorenValList]));
+        return redisServer.actionForClient(client => client.ZADDAsync([REDIS_KEY_ERROR, ...scorenValList]));
     else 
         return Promise.resolve();
 }
@@ -157,7 +157,7 @@ exports.addSortedSet2Error = addSortedSet2Error;
  * @returns {Promise}
  */
 const getHashDoing = () => 
-    getHashByKey(redisKeyDoing)
+    getHashByKey(REDIS_KEY_DOING)
 exports.getHashDoing = getHashDoing;
 
 /**

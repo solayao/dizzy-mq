@@ -1,10 +1,8 @@
 const io = require('socket.io')();
 const schedule = require('node-schedule');
+const { GETTASKSPE, CHECKDOINGSPE } = require('./const');
 const { handleConnect, handleDisconnect, handleJoinRoom, handleGetClientEmitTask, handleCheckDoing,
         handleGetTask, handleAddDoing, handleFinish, handleDelete, handleError } = require('./actions');
-
-const GETTASKSPE = '*/10 * * * * *',
-      CHECKDOINGSPE = '*/10 * * * *';
 
 io.on('connection', socket => {
     let scheduleGetTask, scheduleCheckDoing, currentSocketNum = 0;

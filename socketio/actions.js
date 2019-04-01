@@ -1,6 +1,6 @@
 const { SuccessConsole } = require('dizzyl-util/es/log/ChalkConsole');
 const { isNotEmpty } = require('dizzyl-util/es/type');
-const { ROOMCRAWLERNAME, ROOMCRUDNAME, ROOMIMAGE } = require('./const');
+const { ROOMCRAWLERNAME, ROOMCRUDNAME, ROOMIMAGE } = require('./oldConst');
 const { setMQTask, setHash2Doing, updateMQTask,
         addMQTaskToRoom, addSortedSet2Error,
         getMQRoomList, getRoomTask, getHashByKey, getHashDoing,
@@ -203,6 +203,8 @@ exports.handleFinish = handleFinish;
 const handleDelete = async (redisKey) => {
     let keyList = Array.isArray(redisKey) ? redisKey : [redisKey];
 
+    await handleFinish(keyList);
+
     await delRedisKey(keyList);
 
     keyList = null;
@@ -215,7 +217,8 @@ exports.handleDelete = handleDelete;
  * @param {*} redisKey (String, Array)
  */
 const handleError = async (redisKey) => {
-    let scorenValList = [], 
+    let todayMess = new Date().toLocaleString().split(' ')[0],
+        scorenValList = [new Date(todayMess).valueOf(), todayMess], 
         scoren = new Date().valueOf(),
         keyList = Array.isArray(redisKey) ? redisKey : [redisKey];
 
@@ -229,7 +232,7 @@ const handleError = async (redisKey) => {
 
     await addSortedSet2Error(scorenValList);
 
-    await delRedisKey(keyList);
+    await handleDelete(keyList);
 
     scorenValList = scoren = keyList = valList = null;
 }
