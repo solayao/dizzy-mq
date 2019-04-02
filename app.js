@@ -2,14 +2,13 @@ const Koa = require('koa');
 const Router = require('koa-router');
 const app = new Koa();
 const router = new Router();
-const views = require('koa-views');
 const json = require('koa-json');
 const onerror = require('koa-onerror');
 const bodyparser = require('koa-bodyparser');
 const logger = require('koa-logger');
 const cors = require('koa2-cors');
-const {createMQTaskName, mqAddFirst} = require('./controler');
-const {MQAUTO} = require('./controler/const');
+const { io } = require('./socketio');
+const { handleGetClientEmitTask } = require('./socketio/actions.js');
 
 // error handler
 onerror(app);
@@ -40,12 +39,10 @@ router
     .get('/', (ctx, next) => {
         ctx.body = 'Hello World!';
     })
-    .get('/setTask', async (ctx, next) => {
-        let {taskName, ...taskParams} = ctx.request.query;
-        let task = createMQTaskName(MQAUTO, taskName, taskParams);
-        await mqAddFirst(task);
-        taskName = taskParams = task = null;
-        ctx.body = 'Add Task Successful!';
+    .post('/setTask', async (ctx, next) => {
+        let result = await handleGetClientEmitTask(io, ctx.request.body);
+
+        ctx.body = result ? 'Create Task Successful.' : '参数不正确.';
     });
 
 app.use(router.routes())

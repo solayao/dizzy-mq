@@ -41,3 +41,5 @@ io.on('connection', socket => {
 
     scheduleCheckDoing = schedule.scheduleJob(CHECKDOINGSPE, () => handleCheckDoing());
 })
+
+exports.io = io;

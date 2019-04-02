@@ -1,7 +1,7 @@
 const ROOMCRAWLERNAME = 'crawler',
       ROOMCRUDNAME = 'crud',
       ROOMIMAGE = 'image',
-      GETTASKSPE = '*/10 * * * * *',
+      GETTASKSPE = '*/30 * * * * *',
       CHECKDOINGSPE = '*/10 * * * *';
 
 module.exports = {

@@ -69,13 +69,14 @@ exports.handleJoinRoom = handleJoinRoom;
  * @description 处理从client端接收到的任务信息
  * @param {*} io
  * @param {*} params { to, socketId, taskName, instant(是否即时), ...other }
+ * @returns {Boolean} 成功返回true,失败返回false
  */
 const handleGetClientEmitTask = async (io, params) => {
     let { to, socketId, taskName, instant } = params;
 
-    if (!taskName) return;
+    if (!taskName) return false;
 
-    if (!to && !socketId) return;
+    if (!to && !socketId) return false;
 
     let p = {
         ...params,
@@ -91,6 +92,8 @@ const handleGetClientEmitTask = async (io, params) => {
     }
 
     p = null;
+
+    return true;
 }
 exports.handleGetClientEmitTask = handleGetClientEmitTask;
 
@@ -133,7 +136,7 @@ const handleResolveTaskParam = async (io, param) => {
     let { room, socketId, taskName, ...otherParams } = param;
 
     if (!!room) { // 房间广播
-        io.to(room).clients(async (error, clients) => {
+        await new Promise(resolve => io.to(room).clients(async (error, clients) => {
             if (error) throw error;
 
             if (clients.length > 0) {
@@ -142,7 +145,9 @@ const handleResolveTaskParam = async (io, param) => {
                 if (!!otherParams.redisKey)
                     await addMQTaskToRoom(room, otherParams.redisKey);
             }
-        });
+
+            resolve();
+        }));
     }
 
     if (!!socketId) {   // socket直传
@@ -223,7 +228,7 @@ const handleError = async (redisKey) => {
         keyList = Array.isArray(redisKey) ? redisKey : [redisKey];
 
     let valList = await Promise.all(keyList.map(key => getHashByKey(key)))
-                                .then(obj => JSON.stringify(obj))
+                                .then(paramList => paramList.map(obj => JSON.stringify(obj)))
                                 .catch(err => []);
 
     valList.forEach(val => {
@@ -254,9 +259,11 @@ const handleCheckDoing = async (overtimeMin = 10) => {
             overtimeKeyList.push(redisKey);
     }
 
-    await delHashKey2Doing(overtimeKeyList);
+    if (overtimeKeyList.length) {
+        await delHashKey2Doing(overtimeKeyList);
 
-    await handleError(overtimeKeyList);
+        await handleError(overtimeKeyList);
+    }
 
     doingObj = overtimeKeyList = null;
 }
