@@ -8,7 +8,7 @@ const bodyparser = require('koa-bodyparser');
 const logger = require('koa-logger');
 const cors = require('koa2-cors');
 const { io } = require('./socketio');
-const { handleGetClientEmitTask } = require('./socketio/actions.js');
+const { handleGetClientEmitTask, handleGetTask } = require('./socketio/actions.js');
 
 // error handler
 onerror(app);
@@ -38,6 +38,11 @@ app.use(cors({
 router
     .get('/', (ctx, next) => {
         ctx.body = 'Hello World!';
+    })
+    .post('/getTask', async (ctx) => {
+        await handleGetTask(io);
+
+        ctx.body = 'Get Task Successful.';
     })
     .post('/setTask', async (ctx, next) => {
         let result = await handleGetClientEmitTask(io, ctx.request.body);

@@ -39,7 +39,7 @@ exports.handleConnect = handleConnect;
 const handleDisconnect = socket => {
     delete socketMapper[socket.id];
 
-    opt.message = 'bye bye! ' + socket.id;
+    opt.message = 'Bye bye! ' + socket.id;
 
     SuccessConsole(opt);
 
@@ -58,7 +58,7 @@ const handleJoinRoom = (socket, roomName) => {
 
     socket.join(roomName);
 
-    opt.message = `join ${roomName} room ${socket.id}`;
+    opt.message = `Join ${roomName} room ${socket.id}`;
 
     SuccessConsole(opt);
 }

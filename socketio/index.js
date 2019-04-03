@@ -4,8 +4,11 @@ const { GETTASKSPE, CHECKDOINGSPE } = require('./const');
 const { handleConnect, handleDisconnect, handleJoinRoom, handleGetClientEmitTask, handleCheckDoing,
         handleGetTask, handleAddDoing, handleFinish, handleDelete, handleError } = require('./actions');
 
+let scheduleGetTask = schedule.scheduleJob(GETTASKSPE, () => handleGetTask(io)),
+    scheduleCheckDoing = schedule.scheduleJob(CHECKDOINGSPE, () => handleCheckDoing());
+
 io.on('connection', socket => {
-    let scheduleGetTask, scheduleCheckDoing, currentSocketNum = 0;
+    let currentSocketNum = 0;
 
     currentSocketNum = handleConnect(socket);
 
@@ -36,10 +39,6 @@ io.on('connection', socket => {
     socket.on('mq-task-error', redisKey => handleError(redisKey));
 
     socket.on('client-emit-task', params => handleGetClientEmitTask(io, params));
-
-    scheduleGetTask = schedule.scheduleJob(GETTASKSPE, () => handleGetTask(io));
-
-    scheduleCheckDoing = schedule.scheduleJob(CHECKDOINGSPE, () => handleCheckDoing());
 })
 
 exports.io = io;

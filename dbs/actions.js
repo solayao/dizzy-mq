@@ -14,7 +14,7 @@ const REDIS_KEY_ERROR = 'MQ-ERROR';
  */
 const setMQTask = async (params) => {
     let {room = 'null'} = params,
-        redisKey = 'mq-' + room + '-' + shortid.generate();
+        redisKey = 'mq-' + shortid.generate();
     
     await redisServer.hmSet(redisKey, params);
 
@@ -72,18 +72,16 @@ exports.getMQRoomList = getMQRoomList;
  * @return {Array} [ redisKey ]
  */
 const getRoomTask = async (roomKey, taskNum = 1) => {
-    let i = 1, resultList = [];
+    let taskKeyList = await redisServer.lRange(roomKey, [0, taskNum]);
 
-    do {
-        let taskKey = await redisServer.actionForClient(client => client.BLPOPAsync(roomKey, 5));
+    if (isNotEmpty(taskKeyList)) 
+        await redisServer.actionForClient(client => client.LTRIMAsync(roomKey, taskNum, -1));
 
-        if (!!taskKey) 
-            resultList.push(taskKey[1])
+    let result = isNotEmpty(taskKeyList) ? [...taskKeyList] : [];
 
-        i++;
-    } while (i <= taskNum)
+    taskKeyList = null;
 
-    return resultList;
+    return result;
 }
 exports.getRoomTask = getRoomTask;
 
